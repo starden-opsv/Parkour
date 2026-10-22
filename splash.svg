@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="854" viewBox="0 0 480 854">
+<defs><linearGradient id="sky" x2="0" y2="1"><stop stop-color="#092746"/><stop offset=".42" stop-color="#e77c61"/><stop offset=".62" stop-color="#ffbd69"/><stop offset="1" stop-color="#101a2d"/></linearGradient><linearGradient id="shade" x2="0" y2="1"><stop stop-color="#06111f" stop-opacity="0"/><stop offset="1" stop-color="#06111f" stop-opacity=".96"/></linearGradient></defs>
+<rect width="480" height="854" fill="url(#sky)"/>
+<circle cx="367" cy="344" r="43" fill="#fff0bd" opacity=".96"/>
+<g fill="#23354b" opacity=".9"><path d="M0 405h43v125h28V448h43v104h26V386h49v185H0z"/><path d="M260 422h32v105h26V390h47v148h25V435h40v118h50V510h0v100H260z"/></g>
+<g fill="#17263a"><path d="M0 520h75v-66h33v98h40V480h28v91h47v-68h34v100H0z"/><path d="M247 530h45v-55h30v72h35v-91h31v99h35v-70h27v83h50v-125h0v195H247z"/></g>
+<g fill="#ffcf91" opacity=".65"><path d="M13 458h6v12h-6zm17 0h6v12h-6zm45 22h6v12h-6zm30-7h6v12h-6zm45-67h6v12h-6zm17 0h6v12h-6zm22 69h6v12h-6zm94 56h6v12h-6zm63-76h6v12h-6zm31 29h6v12h-6zm36-19h6v12h-6zm26 33h6v12h-6zm24 16h6v12h-6z"/></g>
+<path d="M0 642 145 598 211 626 273 579 480 625V854H0z" fill="#101b2d"/>
+<path d="M0 695 156 655 220 680 286 635 480 679V854H0z" fill="#182438"/>
+<path d="M0 726h170l-21 128H0zM480 724H307l26 130h147z" fill="#263348"/>
+<path d="M0 726h170l-21 13H0zm480-2H307l5 13h168z" fill="#536176"/>
+<!-- parkour runner silhouette mid-jump -->
+<g fill="#081321" stroke="#081321" stroke-linecap="round" stroke-linejoin="round">
+<path d="M216 255 Q235 232 257 245 L282 270 271 301 241 288 221 277z"/>
+<path d="M222 260 Q193 245 173 220 L143 192 Q133 181 143 174 Q153 170 164 183 L198 202 236 222z" />
+<path d="M263 269 Q288 291 306 312 L324 346 Q329 359 318 363 Q307 365 299 350 L279 326 251 304z"/>
+<path d="M240 286 Q223 310 204 334 L174 357 Q160 367 153 356 Q148 347 164 335 L187 309 203 275z"/>
+<path d="M260 288 Q280 321 284 347 L276 384 Q273 398 261 395 Q250 391 255 376 L257 350 238 317z"/>
+<path d="M223 244 Q222 224 238 216 Q255 211 267 225 L275 247 258 266 235 263z"/>
+<circle cx="246" cy="205" r="20"/>
+<path d="M228 202 Q238 178 259 189 L269 203 256 198 242 205z"/>
+</g>
+<rect width="480" height="854" fill="url(#shade)"/>
+</svg>
