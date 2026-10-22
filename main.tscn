@@ -1,7 +1,24 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Texture2D" path="res://splash.svg" id="1_bg"]
 [ext_resource type="Script" path="res://main.gd" id="2_script"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button"]
+bg_color = Color(1, 0.392157, 0.164706, 1)
+corner_radius_top_left = 18
+corner_radius_top_right = 18
+corner_radius_bottom_right = 18
+corner_radius_bottom_left = 18
+shadow_color = Color(0.16, 0.06, 0.03, 0.35)
+shadow_size = 8
+shadow_offset = Vector2(0, 4)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button_hover"]
+bg_color = Color(1, 0.49, 0.24, 1)
+corner_radius_top_left = 18
+corner_radius_top_right = 18
+corner_radius_bottom_right = 18
+corner_radius_bottom_left = 18
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -26,32 +43,32 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 24.0
-offset_top = 72.0
-offset_right = -24.0
-offset_bottom = -56.0
+offset_left = 28.0
+offset_top = 46.0
+offset_right = -28.0
+offset_bottom = -42.0
 grow_horizontal = 2
 grow_vertical = 2
 alignment = 2
-theme_override_constants/separation = 18
+theme_override_constants/separation = 14
 
 [node name="SpacerTop" type="Control" parent="Content"]
-custom_minimum_size = Vector2(0, 210)
+custom_minimum_size = Vector2(0, 310)
 layout_mode = 2
 size_flags_vertical = 3
 
 [node name="Title" type="Label" parent="Content"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 44
+theme_override_font_sizes/font_size = 48
 text = "PARKOUR"
 horizontal_alignment = 1
 
 [node name="Subtitle" type="Label" parent="Content"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.82, 0.9, 1, 1)
-theme_override_font_sizes/font_size = 18
-text = "TEST BUILD"
+theme_override_colors/font_color = Color(1, 0.78, 0.59, 1)
+theme_override_font_sizes/font_size = 17
+text = "RUN • JUMP • REPEAT"
 horizontal_alignment = 1
 
 [node name="Tagline" type="Label" parent="Content"]
@@ -63,19 +80,25 @@ horizontal_alignment = 1
 autowrap_mode = 2
 
 [node name="StartButton" type="Button" parent="Content"]
-custom_minimum_size = Vector2(0, 58)
+custom_minimum_size = Vector2(0, 62)
 layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 21
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button_hover")
 text = "Начать"
-theme_override_font_sizes/font_size = 20
 
 [node name="StatusLabel" type="Label" parent="Content"]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_color = Color(1, 0.91, 0.82, 1)
 text = ""
 horizontal_alignment = 1
+autowrap_mode = 2
 
 [node name="SpacerBottom" type="Control" parent="Content"]
-custom_minimum_size = Vector2(0, 40)
+custom_minimum_size = Vector2(0, 18)
 layout_mode = 2
 size_flags_vertical = 3
 
