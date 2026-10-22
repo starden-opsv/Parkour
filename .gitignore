@@ -1,0 +1,18 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+# Local backups
+*.backup-*
+*.bak
+
+# Android build outputs
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# Local secrets and environment files
+.env
+.env.*
+!.env.example
