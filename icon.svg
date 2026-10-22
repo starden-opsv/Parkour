@@ -1,7 +1,36 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-<defs><linearGradient id="bg" x2="0" y2="1"><stop stop-color="#0789d8"/><stop offset=".55" stop-color="#ffb75d"/><stop offset="1" stop-color="#e75b50"/></linearGradient></defs>
-<rect width="512" height="512" rx="96" fill="url(#bg)"/><circle cx="354" cy="194" r="108" fill="#fff1b5"/>
-<g fill="#18263d" opacity=".75"><path d="M0 344h74v-82h50v119h38V299h58v111H0z"/><path d="M273 350h52v-98h48v125h39V290h43v99h57v123H273z"/></g>
-<path d="M0 432 125 385l86 35 87-53 214 49v96H0z" fill="#17253c"/>
-<g fill="#071423" stroke="#071423" stroke-linecap="round" stroke-linejoin="round"><circle cx="272" cy="143" r="26"/><path d="M250 160q-24 9-37 30l-25 40 32 21 37-43 38 16 24 39 24-13-20-54-46-34z"/><path d="M235 182l-70-21-47-38q-12-11-20 1-5 9 7 20l47 41 63 29z"/><path d="M285 188l58 20 46 45q11 11 1 19-9 6-20-5l-48-31-49-12z"/><path d="M246 230l-38 58-45 37q-13 10-20-1-6-9 8-20l38-41 26-53z"/><path d="M277 229l15 63 32 47q9 14-3 19-11 4-19-10l-36-46-18-52z"/></g>
+<defs>
+ <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#122c4a"/><stop offset=".42" stop-color="#e77c61"/><stop offset=".66" stop-color="#ffbd76"/><stop offset="1" stop-color="#17243a"/></linearGradient>
+ <linearGradient id="roof" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#26354a"/><stop offset="1" stop-color="#101827"/></linearGradient>
+</defs>
+<rect width="512" height="512" rx="94" fill="url(#sky)"/>
+<circle cx="383" cy="168" r="65" fill="#fff0c2" opacity=".95"/>
+<!-- skyline -->
+<g fill="#24344b">
+ <path d="M0 245h48v-74h39v74h22v-47h42v80H0z"/>
+ <path d="M170 285V156h38v-40h40v169h22v-87h37v87h22V177h45v108h22v-68h35v68h21v-97h42v97h22v227H170z"/>
+</g>
+<g fill="#ffd9a8" opacity=".6">
+ <path d="M58 195h7v15h-7zm18 0h7v15h-7zm119 0h7v13h-7zm20-45h7v13h-7zm69 75h7v14h-7zm61-27h7v14h-7zm76 16h7v14h-7zm47 40h7v14h-7z"/>
+</g>
+<path d="M0 334h97v-35h45v55h41v-41h51v57h46v-38h48v42h45v-57h48v55h41v-29h50v169H0z" fill="url(#roof)"/>
+<path d="M0 392 127 350 210 376 293 337 512 387V512H0z" fill="#101a2c"/>
+<path d="M0 392 127 350 210 376 293 337 512 387" fill="none" stroke="#6c7788" stroke-width="3" opacity=".6"/>
+<!-- traceur seen from behind, leaping -->
+<g fill="#07111f" stroke="#07111f" stroke-linecap="round" stroke-linejoin="round">
+ <path d="M228 191Q244 174 265 185L290 205Q301 216 291 239L277 270 233 262 216 230Q211 207 228 191Z" stroke-width="4"/>
+ <path d="M229 205 198 219 166 200 143 176" fill="none" stroke-width="23"/>
+ <path d="M143 176 128 165" fill="none" stroke-width="16"/>
+ <path d="M280 207 311 222 342 207 367 181" fill="none" stroke-width="23"/>
+ <path d="M367 181 384 169" fill="none" stroke-width="16"/>
+ <path d="M237 260 214 296 181 317 151 305" fill="none" stroke-width="29"/>
+ <path d="M151 305 132 306" fill="none" stroke-width="19"/>
+ <path d="M269 264 296 291 317 326 349 329" fill="none" stroke-width="30"/>
+ <path d="M349 329 370 326" fill="none" stroke-width="19"/>
+ <path d="M230 175Q221 145 244 130Q267 123 282 146L281 168 261 188 239 184Z" stroke-width="3"/>
+ <path d="M227 157Q217 132 239 119Q263 106 281 129L289 149 265 140 250 150 237 143Z" stroke-width="4"/>
+ <path d="M238 209 255 235 275 209M238 246l26 13" fill="none" stroke="#26364b" stroke-width="5"/>
+</g>
+<!-- lower contrast to retain icon clarity at small sizes -->
+<rect width="512" height="512" rx="94" fill="none" stroke="#ffffff" stroke-opacity=".14" stroke-width="8"/>
 </svg>
