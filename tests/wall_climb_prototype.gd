@@ -3,6 +3,7 @@ extends Node3D
 ## Gameplay position is deterministic; animation clips are only visual feedback.
 
 @onready var character: Node3D = $Character
+@onready var camera: Camera3D = $Camera3D
 @onready var animation_player: AnimationPlayer = $Character/AnimationPlayer
 @onready var status_label: Label = $CanvasLayer/Panel/Info/Status
 @onready var climb_button: Button = $CanvasLayer/Panel/Info/ClimbButton
@@ -18,6 +19,7 @@ var climb_elapsed := 0.0
 var stage := "idle"
 
 func _ready() -> void:
+	camera.look_at(Vector3(0.4, 1.0, 0.0), Vector3.UP)
 	character.position = START_POSITION
 	_play_if_available("Idle")
 	climb_button.pressed.connect(_on_climb_pressed)
