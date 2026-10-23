@@ -1,6 +1,6 @@
 # Universal Animation Library — Standard Character Investigation
 
-Status: planned; the asset still needs to be inspected in Godot 4.7.2. No integration into the playable game is approved.
+Status: isolated preview verified by the user in Godot 4.7.2. The Standard model and its animation clips play in the preview; integration into the playable game is still not approved.
 
 ## Goal
 
@@ -8,13 +8,15 @@ Determine whether `assets/Universal Animation Library[Standard]/Unreal-Godot/UAL
 
 **Explicit exclusion:** Do not use `Imp.glb` or `Puglin.glb`. Do not retarget the library onto those models. Keep the current 2D player and gameplay as the production baseline.
 
-## Confirmed repository facts
+## Confirmed facts from Godot inspection and preview
 
 - `UAL1_Standard.glb` and `UAL1_Standard_RM.glb` are present in the Standard animation pack.
 - The included README identifies `UAL1_Standard.glb` as the non-root-motion variant.
 - The README identifies `UAL1_Standard_RM.glb` as the variant with root motion baked into the animations.
 - The included license states CC0 1.0 Universal.
-- File presence alone does not establish that either GLB contains a complete character mesh, materials, skeleton, or a working imported animation library.
+- The local Godot inspection reported a visible mannequin mesh, two materials, a Skeleton3D with 65 bones, an AnimationPlayer, and 42 animation clips for the Standard variants.
+- The user successfully launched `tests/animation_preview.tscn` and confirmed that the character's animations work.
+- The preview's `Roll` clip (selected with key `0`) is the intended **slide/slide-dodge animation** for the parkour game. Do not treat `Crouch_Fwd` as the primary slide action; it remains an optional crouched movement clip for later comparison.
 
 ## Investigation sequence
 
@@ -22,7 +24,7 @@ Determine whether `assets/Universal Animation Library[Standard]/Unreal-Godot/UAL
 2. **Import the Standard asset.** Open the project in Godot 4.7.2 and let the editor import `UAL1_Standard.glb`. Record all import errors and warnings. Do not commit generated `.godot/` cache data.
 3. **Inspect the imported scene tree.** Record node names and types. Specifically establish whether the scene contains a visible mesh, materials, a Skeleton3D, an AnimationPlayer or AnimationTree, and an animation library.
 4. **Inspect geometry and rig.** Record mesh/resource names, material assignments, skeleton path, bone count, and bone names/hierarchy. If no character mesh is present, state that explicitly rather than assuming the GLB is a complete protagonist.
-5. **Inspect animations.** Record exact imported animation names and durations from Godot. Check representative clips such as idle, walk/run, jump, landing, and crouch/roll only if those clips actually exist in the imported resource.
+5. **Inspect animations.** Record exact imported animation names and durations from Godot. The verified preview includes idle, walk, jog, sprint, jump start, jump, landing, crouch idle, crouch forward, and roll. Use `Roll` as the candidate slide action for the game; keep `Crouch_Fwd` as a separate optional clip, not a substitute for the requested slide.
 6. **Build an isolated preview if a visible character is present.** Put the preview in a dedicated test location. Use a neutral floor and camera. Do not alter `main.tscn` or `level_1.tscn`.
 7. **Evaluate motion visually.** Check pose readability, deformation, foot sliding, clipping, floor penetration, and transitions. Clip names alone are not acceptance evidence.
 8. **Compare the root-motion variant only if needed.** Start with `UAL1_Standard.glb` for a game whose movement is controlled by gameplay code. Inspect the RM version separately only if there is a clear reason to compare it; avoid applying root motion twice.
@@ -46,4 +48,14 @@ Include the Godot version, import warnings, imported node tree, mesh/material re
 
 ## Current decision
 
-**No-go for production integration until inspection and preview are complete.** The immediate task is to verify what `UAL1_Standard.glb` actually contains. The current 2D game remains the baseline, and Imp/Puglin remain excluded.
+**Preview passed; production integration remains gated.** The Standard GLB is a complete animated mannequin and its clips play in the isolated preview. For the planned parkour controls, the mapping to test first is:
+- Idle state → `Idle`
+- Walking → `Walk`
+- Running → `Jog_Fwd` or `Sprint` depending on game speed
+- Jump takeoff → `Jump_Start`
+- Airborne → `Jump`
+- Landing → `Jump_Land`
+- Slide → `Roll` (the clip previewed with key `0`)
+- Optional crouched movement → `Crouch_Fwd`
+
+The next stage is to test animation timing and transitions in a separate integration prototype. Keep the existing 2D gameplay as the production baseline until that prototype passes review. Imp/Puglin remain excluded.
