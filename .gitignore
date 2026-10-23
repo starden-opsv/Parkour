@@ -2,6 +2,9 @@
 .godot/
 /android/
 
+# Local licensed assets: never publish original marketplace source files
+/_licensed_assets/
+
 # Local backups
 *.backup-*
 *.bak
