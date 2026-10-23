@@ -3,7 +3,7 @@ extends Control
 # MVP level: temporary geometric art, no external assets required.
 const RUN_SPEED := 230.0
 const GRAVITY := 1150.0
-const JUMP_SPEED := -440.0
+const JUMP_SPEED := -520.0
 const SLIDE_DURATION := 0.62
 const LEVEL_LENGTH := 3300.0
 const PLAYER_X_RATIO := 0.22
@@ -26,6 +26,7 @@ var paint_timer := 0.0
 var result_text := ""
 var result_color := Color.WHITE
 var jump_requested := false
+var jump_count := 0
 var slide_requested := false
 
 func _ready() -> void:
@@ -45,8 +46,8 @@ func _player_height() -> float:
 
 func _player_rect() -> Rect2:
 	var height := _player_height()
-	var draw_y := player_y + (PLAYER_HEIGHT - height if slide_timer > 0.0 else 0.0)
-	return Rect2(_player_screen_x() - PLAYER_WIDTH * 0.5, draw_y, PLAYER_WIDTH, height)
+	# player_y is already clamped using the active height, so crouching stays on the ground.
+	return Rect2(_player_screen_x() - PLAYER_WIDTH * 0.5, player_y, PLAYER_WIDTH, height)
 
 func _pickup_rect(screen_x: float, ground: float) -> Rect2:
 	return Rect2(screen_x - PICKUP_RADIUS, ground - 54.0 - PICKUP_RADIUS, PICKUP_RADIUS * 2.0, PICKUP_RADIUS * 2.0)
@@ -60,9 +61,15 @@ func _process(delta: float) -> void:
 			queue_redraw()
 		return
 
-	if jump_requested and on_ground and slide_timer <= 0.0:
-		player_vy = JUMP_SPEED
-		on_ground = false
+	if jump_requested and slide_timer <= 0.0:
+		if on_ground:
+			player_vy = JUMP_SPEED
+			on_ground = false
+			jump_count = 1
+		elif jump_count == 1:
+			# A second tap while airborne triggers one extra jump.
+			player_vy = JUMP_SPEED * 0.92
+			jump_count = 2
 	jump_requested = false
 
 	if slide_requested and on_ground:
@@ -71,13 +78,14 @@ func _process(delta: float) -> void:
 	if slide_timer > 0.0:
 		slide_timer = maxf(0.0, slide_timer - delta)
 
-	world_x += RUN_SPEED * delta
+	world_x += (RUN_SPEED * 1.3 if slide_timer > 0.0 else RUN_SPEED) * delta
 	player_vy += GRAVITY * delta
 	player_y += player_vy * delta
 	if player_y + _player_height() >= _ground_y():
 		player_y = _ground_y() - _player_height()
 		player_vy = 0.0
 		on_ground = true
+		jump_count = 0
 
 	_check_pickups()
 	_check_obstacles()
@@ -110,9 +118,10 @@ func _obstacle_rects(obstacle: Dictionary, screen_x: float, ground: float) -> Ar
 	if str(obstacle["kind"]) == "jump":
 		rects.append(Rect2(screen_x - 20.0, ground - 48.0, 40.0, 48.0))
 	else:
-		rects.append(Rect2(screen_x - 28.0, ground - 90.0, 56.0, 12.0))
-		rects.append(Rect2(screen_x - 28.0, ground - 90.0, 8.0, 64.0))
-		rects.append(Rect2(screen_x + 20.0, ground - 90.0, 8.0, 64.0))
+		# The low beam intersects a standing player but clears the crouched slide hitbox.
+		rects.append(Rect2(screen_x - 28.0, ground - 52.0, 56.0, 12.0))
+		rects.append(Rect2(screen_x - 28.0, ground - 52.0, 8.0, 26.0))
+		rects.append(Rect2(screen_x + 20.0, ground - 52.0, 8.0, 26.0))
 	return rects
 
 func _check_obstacles() -> void:
@@ -208,9 +217,9 @@ func _draw() -> void:
 				draw_rect(Rect2(ox - 20, ground - 48, 40, 48), Color(0.9, 0.42, 0.22))
 				draw_line(Vector2(ox - 13, ground - 35), Vector2(ox + 13, ground - 35), Color(1.0, 0.8, 0.55), 3.0)
 			else:
-				draw_rect(Rect2(ox - 28, ground - 90, 56, 12), Color(0.88, 0.32, 0.28))
-				draw_rect(Rect2(ox - 28, ground - 90, 8, 64), Color(0.88, 0.32, 0.28))
-				draw_rect(Rect2(ox + 20, ground - 90, 8, 64), Color(0.88, 0.32, 0.28))
+				draw_rect(Rect2(ox - 28, ground - 52, 56, 12), Color(0.88, 0.32, 0.28))
+				draw_rect(Rect2(ox - 28, ground - 52, 8, 26), Color(0.88, 0.32, 0.28))
+				draw_rect(Rect2(ox + 20, ground - 52, 8, 26), Color(0.88, 0.32, 0.28))
 			if DEBUG_HITBOXES:
 				for hitbox in _obstacle_rects(obstacle, ox, ground):
 					draw_rect(hitbox, Color(1.0, 0.2, 0.2, 0.9), false, 1.0)
