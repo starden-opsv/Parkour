@@ -51,6 +51,35 @@ func _run_smoke_tests() -> void:
 		_fail("Player should start with the run animation")
 		return
 	print("PASS: level scene instantiates and player starts running")
+	if level_instance.get("graffiti_full_texture") == null or level_instance.get("graffiti_partial_texture") == null:
+		_fail("Graffiti mural variants did not load")
+		return
+	print("PASS: both graffiti mural variants load")
+	var pickup_states: Array = level_instance.get("collected")
+	if pickup_states.size() != 10:
+		_fail("Expected 10 graffiti collectibles")
+		return
+	pickup_states[0] = true
+	level_instance.set("collected", pickup_states)
+	level_instance.call("_finish_level")
+	if level_instance.get("result_text") == "ШЕДЕВР ЗАВЕРШЁН":
+		_fail("Incomplete graffiti must not be marked fully painted")
+		return
+	print("PASS: incomplete graffiti remains unfinished")
+	level_instance.queue_free()
+	await process_frame
+	var complete_instance := level_packed.instantiate()
+	root.add_child(complete_instance)
+	await process_frame
+	var complete_states: Array = complete_instance.get("collected")
+	for index in complete_states.size():
+		complete_states[index] = true
+	complete_instance.set("collected", complete_states)
+	complete_instance.call("_finish_level")
+	if complete_instance.get("result_text") != "ШЕДЕВР ЗАВЕРШЁН":
+		_fail("Collecting every graffiti item must complete the mural")
+		return
+	print("PASS: collecting every graffiti item completes the mural")
 	quit(0)
 
 func _fail(message: String) -> void:
