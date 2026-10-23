@@ -65,6 +65,27 @@ jobs:
               print(f"OK {path}: {actual[0]}x{actual[1]}")
           PY
 
+      - name: Verify parallax layer paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          script = Path("level_1.gd").read_text(encoding="utf-8")
+          paths = re.findall(r'"path"\s*:\s*"(res://assets/background/post_soviet_city_parallax/[^"]+\.png)"', script)
+          if len(paths) < 7:
+              raise SystemExit(f"Expected at least 7 configured parallax layers, found {len(paths)}")
+          for resource in paths:
+              path = Path(resource.removeprefix("res://"))
+              if not path.is_file():
+                  raise SystemExit(f"Missing parallax resource: {path}")
+              if path.name.startswith("._") or "__MACOSX" in path.parts:
+                  raise SystemExit(f"AppleDouble metadata must not be used as a texture: {path}")
+              print(f"OK parallax: {path}")
+          PY
+
       - name: Import resources and parse project
         run: godot --headless --editor --path . --quit
 
