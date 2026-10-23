@@ -287,9 +287,6 @@ func _draw() -> void:
 	for i in range(0, int(w) + 80, 80):
 		var x := float(i) - fmod(world_x, 80.0)
 		draw_line(Vector2(x, ground + 18), Vector2(x + 34, ground + 18), Color(0.22, 0.28, 0.31), 2.0)
-	for i in range(8):
-		var bx := float(i) * 150.0 - fmod(world_x * 0.18, 150.0)
-		draw_rect(Rect2(bx, ground - 100 - float((i * 17) % 60), 72, 120 + float((i * 17) % 60)), Color(0.075, 0.12, 0.18))
 	for i in PICKUP_POSITIONS.size():
 		if not collected[i]:
 			var pickup_x: float = float(PICKUP_POSITIONS[i]) - world_x + player_x
