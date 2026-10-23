@@ -70,3 +70,6 @@ jobs:
 
       - name: Start main scene headlessly
         run: godot --headless --path . --quit-after 3
+
+      - name: Run headless scene and animation smoke tests
+        run: godot --headless --path . --script res://tests/headless_smoke.gd
