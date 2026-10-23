@@ -1,4 +1,12 @@
-# FAB Stylized Young Boy — integration plan
+# FAB Stylized Young Boy — 3D game integration plan
+
+## Decision
+
+The project owner explicitly accepts converting Parkour Rush 2D into a 3D game if that is the better way to use this character. The preferred direction is now a **3D side-scrolling parkour game in Godot 4.7.2**, not rendering the model into sprite sheets by default.
+
+Keep the side-scroller's readable lane-based gameplay, short levels, jump/slide controls, coins and restart loop. The camera follows the character from a fixed side angle; the world and character are 3D. This uses the model's rig and native animations directly and avoids a large Blender-to-sprite export pipeline.
+
+Do not replace the entire existing level/gameplay in one unverified edit. Implement a separate vertical-slice scene first, compare it with the current prototype, and migrate gameplay systems in small, testable steps.
 
 ## Selected asset
 
@@ -6,47 +14,78 @@
 - Creator shown on the listing: Abubakar Aulakh.
 - Formats listed: FBX, GLB/glTF, DAE, BLEND, OBJ and PBR textures.
 - Animations listed by the seller: idle, walk, run, jump, talk and sit.
-- This game is currently a 2D side-scroller in Godot 4.7.2. The asset is a rigged 3D character, so it must not be dropped into the existing AnimatedSprite2D pipeline as if it were a 2D sprite sheet.
+- Godot's documented preferred 3D exchange format is glTF 2.0 (.glb / .gltf); use a GLB export if supplied, otherwise import FBX or export from Blender to GLB.
 
 ## Licensing and repository rule
 
-The repository is public. Do not commit the downloaded source model, original textures, FBX/BLEND/GLB files, or exported source animation frames to this public repository. Fab's standard license permits use in a project and sharing with project collaborators, but prohibits standalone redistribution of the asset. Keep the purchased/downloaded package in a local, access-controlled folder and confirm the actual license tier shown for the purchase.
+The repository is public. Do not commit the downloaded source model, original textures, FBX/BLEND/GLB files, or other standalone source assets to the public repository. Fab's Standard License permits use in a project and sharing with project collaborators, but prohibits standalone redistribution of the asset. Keep the purchased/downloaded package in a local, access-controlled folder and confirm the actual license tier shown for the purchase.
 
 Suggested local-only location (do not commit):
 `res://_licensed_assets/fab_stylized_young_boy/`
 
-The project must remain buildable from the public repository without the licensed package. Add the local asset directory to `.gitignore` before copying any files into it.
+The `/_licensed_assets/` directory is ignored by Git. The public repository must remain usable without the licensed package, with clear setup instructions and a safe placeholder/fallback if the asset is absent.
 
-## Chosen rendering path
+## 3D vertical-slice architecture
 
-Keep the gameplay and collision logic 2D. Render the rigged character from Blender into 2D sprite sheets with a consistent side-facing camera, orthographic projection, transparent background, fixed frame size, and fixed ground baseline. Import the resulting game-use frames into Godot as AnimatedSprite2D animations. This preserves the current 2D gameplay, hitboxes, mobile controls and level logic.
+Create a separate scene before replacing the current project entry scene:
 
-Do not replace the gameplay with CharacterBody3D or change the project to a 3D renderer.
+- `scenes/3d_prototype/parkour_3d_test.tscn` — short test track with ground, one jump obstacle, one slide obstacle, a coin, lighting and fixed side camera.
+- `scenes/3d_prototype/player_3d.tscn` — `CharacterBody3D`, collision shape, model pivot, imported character scene and `AnimationPlayer`/animation tree as appropriate.
+- `scripts/3d_prototype/player_3d.gd` — movement state machine; ground movement along one world axis, jump on vertical axis, gravity, and slide state.
+- `scripts/3d_prototype/camera_3d.gd` — fixed side camera that tracks player position without rotating around the scene.
+- Keep the current 2D scenes and scripts unchanged until the vertical slice passes acceptance checks.
+
+The game can still be a side-scroller: constrain player depth movement, lock the camera to the side, and compose obstacles on one plane. Avoid unnecessary free-roaming 3D mechanics.
 
 ## Animation mapping
 
-| Godot animation | Source animation / action | Notes |
+| Gameplay state | Source animation / implementation | Notes |
 |---|---|---|
-| `idle` | Idle | Loop |
-| `run` | Run | Loop; main gameplay locomotion |
-| `jump` | Jump | One-shot; trigger when jump begins |
-| `fall` | Run/Jump pose or a separately authored fall action | Seller does not list a fall animation; inspect the downloaded rig before mapping |
-| `land` | Jump end / landing pose | Seller does not list a separate landing animation; inspect and author/derive a short landing sequence if needed |
-| `slide` | Not included in the listed set | Must be authored in Blender or replaced with a suitable licensed animation; do not fake a full slide by merely squashing the sprite |
-| `talk`, `sit`, `walk` | Included source actions | Optional; not required for the first gameplay pass |
+| `idle` | Idle | Loop when stationary |
+| `run` | Run | Loop during ground movement; primary gameplay state |
+| `jump` | Jump | Start on jump; inspect whether it includes a complete take-off and landing |
+| `fall` | Jump/air pose or authored fall | Seller does not list a dedicated fall action; inspect the actual rig |
+| `land` | Jump ending or authored short landing | Seller does not list a dedicated landing action |
+| `slide` | Not listed | Required gameplay animation; author a compatible slide in Blender or obtain a separately licensed matching animation |
+| `walk`, `talk`, `sit` | Included source actions | Optional for first playable slice |
 
-## Import and acceptance checklist
+Use animation state transitions driven by gameplay state, not by the animation's visual pose. Collision height and slide duration must be controlled by the player state machine and collision shape, not inferred from the model's bones.
 
-1. Download the package only through the purchaser's Fab account and read the actual license selected at checkout.
-2. Keep the original package outside version control. Do not put it in a public commit, public release, Git LFS pointer, or public artifact.
-3. Inspect the model's forward axis, rig, scale, materials, and animation names in Blender before building an export.
-4. Render side-facing PNG sequences with transparency and identical dimensions for each frame. Keep the character's feet on a consistent baseline; avoid camera movement and per-animation scale changes.
-5. Export at least `idle`, `run`, `jump`, `fall`, `land`, and `slide`. The final three actions may require Blender editing because they are not all listed as included animations.
-6. Import the exported, game-use frames into `assets/character/fab_boy/` only after the license and redistribution implications for those derived frames have been checked. Keep source model files out of the public repository.
-7. Add a separate Godot `SpriteFrames` resource and preview scene first; do not replace the current character until all required animations and collision alignment pass.
-8. Verify the existing 2D hitboxes separately from the rendered character. Art dimensions must not silently alter jump, slide, obstacle or ground collision behavior.
-9. Run the existing headless smoke test and add checks for required animation names, frame counts, and slide baseline before switching the level to the new character.
+## Implementation phases
+
+### Phase 1 — local asset verification
+1. Download the package through the purchaser's Fab account.
+2. Keep it in the ignored local asset folder; never commit it or put it in public artifacts.
+3. Inspect the model, skeleton, materials, root motion, scale, facing direction and actual animation names in Blender or Godot.
+4. Confirm the model imports and its run/jump animations play in Godot 4.7.2.
+
+### Phase 2 — isolated 3D vertical slice
+1. Add the separate 3D player and test-track scenes listed above.
+2. Use `CharacterBody3D` and `CollisionShape3D` for collisions; align the capsule to the model's feet.
+3. Implement keyboard controls for editor testing and reuse the project's planned touch jump/slide controls for mobile.
+4. Add fixed side camera, one jumpable obstacle, one slide-under obstacle and one collectible.
+5. Add a fallback placeholder so headless CI can test the scene even when the licensed model is not present.
+
+### Phase 3 — animation and collision validation
+1. Verify idle/run/jump transitions, landing, and return to run.
+2. Add or create a slide animation. Until it exists, do not mark slide polish complete.
+3. Confirm the collision capsule lowers during slide and restores after it; prevent standing up inside an obstacle.
+4. Test repeated jump/slide input, landing at obstacle edges, death/restart and coin collection.
+5. Run the Godot headless smoke test and add 3D scene/state checks.
+
+### Phase 4 — migration decision
+Only after the vertical slice is playable and stable, decide whether to migrate the complete game. If accepted, port one system at a time: player movement, obstacles, level finish, coins/score, restart/death, UI, then Android controls and export. Keep the 2D prototype available until the 3D version passes acceptance.
+
+## Acceptance criteria
+
+- Project imports in Godot 4.7.2 with no missing-resource errors when the local licensed asset is installed.
+- The character faces and moves consistently along the side-scrolling track.
+- Run/jump animations are triggered by gameplay state and do not drift away from the collision body.
+- Slide lowers the collision shape and passes under a test obstacle without changing ground height.
+- Coin collection, death/restart, and finish trigger correctly in the vertical slice.
+- Camera stays fixed to the side and does not introduce depth movement or unwanted perspective changes.
+- CI can run without the licensed asset; no marketplace source model is stored in public Git history.
 
 ## Current limitation
 
-The store page confirms a rigged 3D model and lists idle, walk, run, jump, talk and sit. It does not list a dedicated fall, landing or slide action. The actual model files are not available to this GitHub integration, so animation export and visual validation cannot be truthfully marked complete yet. This document records the safe integration path; it is not evidence that the asset has already been downloaded or animated in-game.
+The actual model files are not available to this GitHub integration, so I cannot truthfully claim the model has been imported, the animation names verified, or the game converted. The current PR prepares a safe path. Runtime implementation begins after the package is present locally; meanwhile, the existing 2D prototype remains intact.
