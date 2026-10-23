@@ -67,10 +67,24 @@ func _run_smoke_tests() -> void:
 	if generated_obstacles.size() < 6:
 		_fail("Generated level should contain at least 6 obstacles")
 		return
+	var spray_cans: Array = level_instance.get("spray_can_positions")
+	if spray_cans.size() != 2:
+		_fail("Expected two rare spray-can shield pickups")
+		return
 	if not level_instance.has_method("_draw_finish_marker"):
 		_fail("Visible finish marker method is missing")
 		return
-	print("PASS: procedural layout has %d pickups, %d obstacles, length %.0f" % [pickup_states.size(), generated_obstacles.size(), generated_length])
+	print("PASS: procedural layout has %d pickups, %d obstacles, %d shields, length %.0f" % [pickup_states.size(), generated_obstacles.size(), spray_cans.size(), generated_length])
+	level_instance.call("_register_pickup")
+	level_instance.set("combo_timer", 2.0)
+	level_instance.call("_register_pickup")
+	if level_instance.get("combo_count") != 2 or level_instance.get("run_score") != 300:
+		_fail("Pickup streak should award a 2x combo and 300 points")
+		return
+	if level_instance.call("_current_run_speed") <= 230.0:
+		_fail("Run speed should increase as the level progresses")
+		return
+	print("PASS: combo scoring and progressive run speed")
 	pickup_states[0] = true
 	level_instance.set("collected", pickup_states)
 	level_instance.call("_finish_level")
