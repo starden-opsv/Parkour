@@ -87,7 +87,8 @@ horizontal_alignment = 1
 autowrap_mode = 2
 
 [node name="StartButton" type="Button" parent="Content"]
-custom_minimum_size = Vector2(0, 62)
+custom_minimum_size = Vector2(220, 62)
+size_flags_horizontal = 4
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
