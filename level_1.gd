@@ -117,7 +117,8 @@ func _collected_count() -> int:
 			total += 1
 	return total
 
-func _unhandled_input(event: InputEvent) -> void:
+func _input(event: InputEvent) -> void:
+	# Handle touch directly so UI/control propagation cannot swallow the tap.
 	if event is InputEventScreenTouch and event.pressed:
 		_handle_press(event.position)
 	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
@@ -133,8 +134,10 @@ func _unhandled_input(event: InputEvent) -> void:
 func _handle_press(position: Vector2) -> void:
 	if ended:
 		get_tree().reload_current_scene()
-	elif position.x > size.x * 0.68 and position.y > size.y * 0.62:
+	elif position.y >= size.y * 0.62 and position.x >= size.x * 0.58:
 		slide_requested = true
+	elif position.y >= size.y * 0.62 and position.x <= size.x * 0.42:
+		jump_requested = true
 	else:
 		jump_requested = true
 
@@ -183,9 +186,11 @@ func _draw() -> void:
 	draw_rect(Rect2(18, 18, w - 36, 8), Color(0.16, 0.22, 0.28))
 	draw_rect(Rect2(18, 18, (w - 36) * clampf(world_x / LEVEL_LENGTH, 0.0, 1.0), 8), Color(0.12, 0.85, 0.88))
 	draw_string(ThemeDB.fallback_font, Vector2(22, 48), "ГРАФФИТИ: %d" % _collected_count(), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color.WHITE)
-	draw_circle(Vector2(w - 78, h - 68), 48, Color(0.1, 0.35, 0.48, 0.88))
-	draw_string(ThemeDB.fallback_font, Vector2(w - 113, h - 60), "ПОДКАТ", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE)
-	draw_string(ThemeDB.fallback_font, Vector2(24, h - 28), "КАСАНИЕ — ПРЫЖОК", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(0.85, 0.9, 0.96))
+	draw_circle(Vector2(82, h - 68), 48, Color(0.12, 0.48, 0.62, 0.92))
+	draw_string(ThemeDB.fallback_font, Vector2(44, h - 61), "ПРЫЖОК", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE)
+	draw_circle(Vector2(w - 82, h - 68), 48, Color(0.1, 0.35, 0.48, 0.92))
+	draw_string(ThemeDB.fallback_font, Vector2(w - 119, h - 61), "ПОДКАТ", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE)
+	draw_string(ThemeDB.fallback_font, Vector2(w * 0.5 - 112, h - 26), "ПРЫЖОК СЛЕВА • ПОДКАТ СПРАВА", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(0.85, 0.9, 0.96))
 	if ended:
 		_draw_result()
 
@@ -207,5 +212,10 @@ func _draw_result() -> void:
 				var point := center + Vector2(cos(angle) * 92.0, sin(angle) * 48.0) * scale_factor
 				draw_line(center, point, result_color, 13.0)
 			draw_string(ThemeDB.fallback_font, Vector2(w * 0.36, h * 0.46), "TAG!", HORIZONTAL_ALIGNMENT_LEFT, -1, 48, result_color)
-	draw_string(ThemeDB.fallback_font, Vector2(24, h * 0.82), result_text, HORIZONTAL_ALIGNMENT_CENTER, w - 48, 24, result_color)
-	draw_string(ThemeDB.fallback_font, Vector2(24, h * 0.9), "Собрано: %d   •   Нажми, чтобы повторить" % _collected_count(), HORIZONTAL_ALIGNMENT_CENTER, w - 48, 16, Color.WHITE)
+	var heading := result_text
+	if not painting:
+		draw_string(ThemeDB.fallback_font, Vector2(24, h * 0.66), heading, HORIZONTAL_ALIGNMENT_CENTER, w - 48, 32, result_color)
+		draw_string(ThemeDB.fallback_font, Vector2(24, h * 0.76), "Попробуй ещё раз", HORIZONTAL_ALIGNMENT_CENTER, w - 48, 24, Color.WHITE)
+	else:
+		draw_string(ThemeDB.fallback_font, Vector2(24, h * 0.78), heading, HORIZONTAL_ALIGNMENT_CENTER, w - 48, 24, result_color)
+	draw_string(ThemeDB.fallback_font, Vector2(24, h * 0.9), "Собрано: %d   •   НАЖМИ, ЧТОБЫ НАЧАТЬ ЗАНОВО" % _collected_count(), HORIZONTAL_ALIGNMENT_CENTER, w - 48, 16, Color.WHITE)
