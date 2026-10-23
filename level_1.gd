@@ -72,11 +72,14 @@ func _process(delta: float) -> void:
 			jump_count = 2
 	jump_requested = false
 
-	if slide_requested and on_ground:
+	if slide_requested and on_ground and slide_timer <= 0.0:
 		slide_timer = SLIDE_DURATION
+		player_y = _ground_y() - SLIDE_HEIGHT
 	slide_requested = false
 	if slide_timer > 0.0:
 		slide_timer = maxf(0.0, slide_timer - delta)
+		if slide_timer == 0.0 and on_ground:
+			player_y = _ground_y() - PLAYER_HEIGHT
 
 	world_x += (RUN_SPEED * 1.3 if slide_timer > 0.0 else RUN_SPEED) * delta
 	player_vy += GRAVITY * delta
