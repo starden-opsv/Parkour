@@ -1,0 +1,71 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://tests/wall_climb_prototype.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://assets/Universal Animation Library[Standard]/Unreal-Godot/UAL1_Standard.glb" id="2_character"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_floor"]
+size = Vector3(12, 0.3, 3)
+
+[sub_resource type="BoxMesh" id="BoxMesh_wall"]
+size = Vector3(1.2, 1.8, 2.0)
+
+[node name="WallClimbPrototype" type="Node3D"]
+script = ExtResource("1_script")
+
+[node name="Floor" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.15, 0)
+mesh = SubResource("BoxMesh_floor")
+
+[node name="Wall" type="MeshInstance3D" parent="."]
+position = Vector3(0.9, 0.9, 0)
+mesh = SubResource("BoxMesh_wall")
+
+[node name="Character" parent="." instance=ExtResource("2_character")]
+position = Vector3(-1.2, 0, 0)
+
+[node name="Camera3D" type="Camera3D" parent="."]
+position = Vector3(3.6, 2.8, 7.5)
+current = true
+projection = 1
+size = 7.5
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-38, -25, 0)
+light_energy = 1.5
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = Environment.new()
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="Panel" type="PanelContainer" parent="CanvasLayer"]
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 570.0
+offset_bottom = 140.0
+
+[node name="Info" type="VBoxContainer" parent="CanvasLayer/Panel"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="CanvasLayer/Panel/Info"]
+layout_mode = 2
+text = "WALL CLIMB — ПРОТОТИП"
+theme_override_font_sizes/font_size = 22
+
+[node name="Status" type="Label" parent="CanvasLayer/Panel/Info"]
+layout_mode = 2
+text = "Нажми E или кнопку, чтобы захватить край и забраться наверх."
+
+[node name="ClimbButton" type="Button" parent="CanvasLayer/Panel/Info"]
+custom_minimum_size = Vector2(250, 44)
+layout_mode = 2
+text = "Карабкаться (E)"
+
+[node name="RestartButton" type="Button" parent="CanvasLayer/Panel/Info"]
+custom_minimum_size = Vector2(250, 36)
+layout_mode = 2
+text = "Сбросить сцену"
+
+[connection signal="pressed" from="CanvasLayer/Panel/Info/ClimbButton" to="." method="_on_climb_pressed"]
+[connection signal="pressed" from="CanvasLayer/Panel/Info/RestartButton" to="." method="_on_restart_pressed"]
