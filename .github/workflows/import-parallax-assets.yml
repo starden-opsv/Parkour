@@ -28,6 +28,12 @@ jobs:
           test -s post_soviet_city_parallax.zip
           echo "=== Archive inventory ==="
           unzip -l post_soviet_city_parallax.zip
+          # Rebuild generated assets from the archive so stale metadata files are removed.
+          python - <<'PY'
+          from pathlib import Path
+          import shutil
+          shutil.rmtree(Path("assets/background/post_soviet_city_parallax"), ignore_errors=True)
+          PY
           mkdir -p assets/background/post_soviet_city_parallax
           unzip -o post_soviet_city_parallax.zip -d /tmp/parallax-pack
           python - <<'PY'
