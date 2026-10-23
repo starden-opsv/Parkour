@@ -5,8 +5,10 @@ const RUN_SPEED := 230.0
 const GRAVITY := 1150.0
 const JUMP_SPEED := -520.0
 const SLIDE_DURATION := 0.78
-const CLIMB_DURATION := 0.82
-const CLIMB_RANGE := 105.0
+const CLIMB_RANGE := 650.0
+const CLIMB_UP_DURATION := 0.34
+const CLIMB_DOWN_DURATION := 0.32
+const CLIMB_OBSTACLE_HEIGHT := 112.0
 const MIN_LEVEL_LENGTH := 4200.0
 const MAX_LEVEL_LENGTH := 5000.0
 const PLAYER_X_RATIO := 0.22
@@ -50,6 +52,10 @@ var jump_count := 0
 var slide_requested := false
 var climb_requested := false
 var climb_timer := 0.0
+var climb_state := "" # approach -> up -> cross -> down
+var climb_target_x := -1.0
+var climb_phase_timer := 0.0
+var climb_start_y := 0.0
 var character_anim_time := 0.0
 var player_sprite: AnimatedSprite2D
 var was_airborne := false
@@ -116,11 +122,11 @@ func _process(delta: float) -> void:
 			queue_redraw()
 		return
 
-	if climb_requested and on_ground and slide_timer <= 0.0 and climb_timer <= 0.0:
+	if climb_requested and on_ground and slide_timer <= 0.0 and climb_state.is_empty():
 		_try_climb()
 	climb_requested = false
 
-	if jump_requested and slide_timer <= 0.0 and climb_timer <= 0.0:
+	if jump_requested and slide_timer <= 0.0 and climb_state.is_empty():
 		if on_ground:
 			player_vy = JUMP_SPEED
 			on_ground = false
@@ -131,7 +137,7 @@ func _process(delta: float) -> void:
 			jump_count = 2
 	jump_requested = false
 
-	if slide_requested and on_ground and slide_timer <= 0.0 and climb_timer <= 0.0:
+	if slide_requested and on_ground and slide_timer <= 0.0 and climb_state.is_empty():
 		slide_timer = SLIDE_DURATION
 		player_y = _ground_y() - SLIDE_HEIGHT
 	slide_requested = false
@@ -140,25 +146,17 @@ func _process(delta: float) -> void:
 		if slide_timer == 0.0 and on_ground:
 			player_y = _ground_y() - PLAYER_HEIGHT
 
-	if climb_timer > 0.0:
-		climb_timer = maxf(0.0, climb_timer - delta)
-		world_x += _current_run_speed() * 1.6 * delta
-		var climb_progress := 1.0 - climb_timer / CLIMB_DURATION
-		player_vy = 0.0
-		player_y = _ground_y() - PLAYER_HEIGHT - sin(climb_progress * PI) * 135.0
-		if climb_timer == 0.0:
-			player_y = _ground_y() - PLAYER_HEIGHT
-			on_ground = true
-			jump_count = 0
+	if not climb_state.is_empty():
+		_process_climb(delta)
 	else:
 		world_x += (_current_run_speed() * 1.35 if slide_timer > 0.0 else _current_run_speed()) * delta
 		player_vy += GRAVITY * delta
 		player_y += player_vy * delta
-	if climb_timer <= 0.0 and player_y + _player_height() >= _ground_y():
-		player_y = _ground_y() - _player_height()
-		player_vy = 0.0
-		on_ground = true
-		jump_count = 0
+		if player_y + _player_height() >= _ground_y():
+			player_y = _ground_y() - _player_height()
+			player_vy = 0.0
+			on_ground = true
+			jump_count = 0
 
 	_check_pickups()
 	_check_obstacles()
@@ -295,25 +293,88 @@ func _obstacle_rects(obstacle: Dictionary, screen_x: float, ground: float) -> Ar
 	return rects
 
 func _try_climb() -> void:
-	var player_x := _player_screen_x()
+	# The climb button is an assisted parkour action: approach, mantle, cross, drop.
+	# Only start if a climbable block is close enough and no other obstacle comes first.
+	var nearest_climb_x := -1.0
+	var nearest_distance := CLIMB_RANGE + 1.0
 	for obstacle in _obstacles():
-		if str(obstacle["kind"]) != "climb":
+		var distance: float = float(obstacle["x"]) - world_x
+		if distance < -PLAYER_WIDTH or distance > CLIMB_RANGE:
 			continue
-		var obstacle_screen_x: float = float(obstacle["x"]) - world_x + player_x
-		var distance := obstacle_screen_x - player_x
-		if distance >= -PLAYER_WIDTH and distance <= CLIMB_RANGE:
-			climb_timer = CLIMB_DURATION
-			on_ground = false
-			player_vy = 0.0
-			jump_count = 0
+		if str(obstacle["kind"]) == "climb" and distance < nearest_distance:
+			nearest_distance = distance
+			nearest_climb_x = float(obstacle["x"])
+	if nearest_climb_x < 0.0:
+		return
+	for obstacle in _obstacles():
+		var distance: float = float(obstacle["x"]) - world_x
+		if distance >= -PLAYER_WIDTH and distance < nearest_distance and str(obstacle["kind"]) != "climb":
 			return
+	climb_target_x = nearest_climb_x
+	climb_state = "approach"
+	climb_phase_timer = 0.0
+	climb_start_y = player_y
+	on_ground = true
+	player_vy = 0.0
+	jump_count = 0
+
+func _process_climb(delta: float) -> void:
+	var ground := _ground_y()
+	var top_y := ground - PLAYER_HEIGHT - CLIMB_OBSTACLE_HEIGHT
+	var speed := _current_run_speed()
+	player_vy = 0.0
+	match climb_state:
+		"approach":
+			# Keep running until the character reaches the front face of the block.
+			var obstacle_screen_x := climb_target_x - world_x + _player_screen_x()
+			if obstacle_screen_x > _player_screen_x() + PLAYER_WIDTH * 0.5 + 2.0:
+				world_x += speed * delta
+				player_y = ground - PLAYER_HEIGHT
+			else:
+				climb_state = "up"
+				climb_phase_timer = 0.0
+				climb_start_y = player_y
+				on_ground = false
+		"up":
+			climb_phase_timer = minf(1.0, climb_phase_timer + delta / CLIMB_UP_DURATION)
+			player_y = lerpf(ground - PLAYER_HEIGHT, top_y, _ease_out(climb_phase_timer))
+			if climb_phase_timer >= 1.0:
+				climb_state = "cross"
+				climb_phase_timer = 0.0
+				player_y = top_y
+		"cross":
+			# Run across the obstacle top; don't freeze in place on the ledge.
+			world_x += speed * delta
+			player_y = top_y
+			var obstacle_right_screen_x := climb_target_x + 34.0 - world_x + _player_screen_x()
+			if obstacle_right_screen_x < _player_screen_x() - PLAYER_WIDTH * 0.5:
+				climb_state = "down"
+				climb_phase_timer = 0.0
+				climb_start_y = player_y
+		"down":
+			climb_phase_timer = minf(1.0, climb_phase_timer + delta / CLIMB_DOWN_DURATION)
+			player_y = lerpf(climb_start_y, ground - PLAYER_HEIGHT, _ease_in(climb_phase_timer))
+			world_x += speed * 0.35 * delta
+			if climb_phase_timer >= 1.0:
+				climb_state = ""
+				climb_target_x = -1.0
+				climb_phase_timer = 0.0
+				player_y = ground - PLAYER_HEIGHT
+				on_ground = true
+				jump_count = 0
+
+func _ease_out(t: float) -> float:
+	return 1.0 - pow(1.0 - clampf(t, 0.0, 1.0), 3.0)
+
+func _ease_in(t: float) -> float:
+	return pow(clampf(t, 0.0, 1.0), 2.0)
 
 func _check_obstacles() -> void:
 	var player_rect := _player_rect()
 	var player_x := _player_screen_x()
 	var ground := _ground_y()
 	for obstacle in _obstacles():
-		if climb_timer > 0.0 and str(obstacle["kind"]) == "climb":
+		if not climb_state.is_empty() and str(obstacle["kind"]) == "climb" and is_equal_approx(float(obstacle["x"]), climb_target_x):
 			continue
 		var obstacle_screen_x: float = float(obstacle["x"]) - world_x + player_x
 		if obstacle_screen_x < -80.0 or obstacle_screen_x > size.x + 80.0:
@@ -475,12 +536,23 @@ func _draw() -> void:
 		var ox: float = float(obstacle["x"]) - world_x + player_x
 		if ox > -80 and ox < w + 80:
 			if str(obstacle["kind"]) == "jump":
-				draw_rect(Rect2(ox - 32, ground - 78, 64, 78), Color(0.9, 0.42, 0.22))
-				draw_line(Vector2(ox - 22, ground - 58), Vector2(ox + 22, ground - 58), Color(1.0, 0.8, 0.55), 4.0)
+				# Roadwork barrier: silhouette, reflective stripes and feet read clearly at speed.
+				draw_rect(Rect2(ox - 35, ground - 76, 70, 76), Color(0.18, 0.12, 0.12, 0.28))
+				draw_rect(Rect2(ox - 32, ground - 72, 64, 72), Color(0.82, 0.25, 0.17))
+				draw_rect(Rect2(ox - 32, ground - 55, 64, 13), Color(1.0, 0.83, 0.48))
+				draw_rect(Rect2(ox - 32, ground - 31, 64, 13), Color(1.0, 0.83, 0.48))
+				draw_rect(Rect2(ox - 38, ground - 7, 76, 7), Color(0.24, 0.27, 0.3))
 			elif str(obstacle["kind"]) == "climb":
-				draw_rect(Rect2(ox - 34, ground - 112, 68, 112), Color(0.67, 0.38, 0.23))
-				draw_rect(Rect2(ox - 27, ground - 100, 54, 7), Color(0.95, 0.69, 0.39))
-				draw_rect(Rect2(ox - 27, ground - 76, 54, 7), Color(0.95, 0.69, 0.39))
+				# Stack of tagged concrete blocks with a bright top lip: this is the climb target.
+				draw_rect(Rect2(ox - 38, ground - 112, 76, 112), Color(0.12, 0.10, 0.13, 0.3))
+				draw_rect(Rect2(ox - 34, ground - 112, 68, 112), Color(0.43, 0.38, 0.34))
+				for row in range(4):
+					var by := ground - 88.0 + float(row) * 25.0
+					draw_line(Vector2(ox - 32, by), Vector2(ox + 32, by), Color(0.25, 0.24, 0.24), 3.0)
+					draw_line(Vector2(ox - 8, by - 22), Vector2(ox - 8, by), Color(0.25, 0.24, 0.24), 2.0)
+				draw_rect(Rect2(ox - 35, ground - 116, 70, 8), Color(0.12, 0.85, 0.88))
+				draw_rect(Rect2(ox - 24, ground - 90, 48, 22), Color(0.9, 0.25, 0.64))
+				draw_string(ThemeDB.fallback_font, Vector2(ox - 20, ground - 74), "UP", HORIZONTAL_ALIGNMENT_LEFT, 40, 12, Color.WHITE)
 			else:
 				draw_rect(Rect2(ox - 28, ground - 52, 56, 12), Color(0.88, 0.32, 0.28))
 				draw_rect(Rect2(ox - 28, ground - 52, 8, 26), Color(0.88, 0.32, 0.28))
@@ -510,7 +582,7 @@ func _draw() -> void:
 	draw_circle(Vector2(w * 0.50, h - 68), 45, Color(0.1, 0.35, 0.48, 0.92))
 	draw_string(ThemeDB.fallback_font, Vector2(w * 0.50 - 34, h - 61), "СКОЛЬЗ.", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color.WHITE)
 	draw_circle(Vector2(w * 0.86, h - 68), 45, Color(0.35, 0.28, 0.52, 0.95))
-	draw_string(ThemeDB.fallback_font, Vector2(w * 0.86 - 42, h - 61), "КАРАБК.", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color.WHITE)
+	draw_string(ThemeDB.fallback_font, Vector2(w * 0.86 - 42, h - 61), "ЗАЛЕЗТЬ", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
 	draw_string(ThemeDB.fallback_font, Vector2(w * 0.5 - 160, h - 14), "ПРЫЖОК • СКОЛЬЖЕНИЕ • КАРАБКАНИЕ", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0.85, 0.9, 0.96))
 	if ended:
 		_draw_result()
