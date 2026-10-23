@@ -56,9 +56,21 @@ func _run_smoke_tests() -> void:
 		return
 	print("PASS: both graffiti mural variants load")
 	var pickup_states: Array = level_instance.get("collected")
-	if pickup_states.size() != 10:
-		_fail("Expected 10 graffiti collectibles")
+	if pickup_states.size() < 14 or pickup_states.size() > 18:
+		_fail("Expected 14-18 procedurally generated graffiti collectibles")
 		return
+	var generated_length: float = level_instance.get("level_length")
+	if generated_length < 4200.0 or generated_length > 5000.0:
+		_fail("Generated level length is outside 4200-5000")
+		return
+	var generated_obstacles: Array = level_instance.get("obstacle_layout")
+	if generated_obstacles.size() < 6:
+		_fail("Generated level should contain at least 6 obstacles")
+		return
+	if not level_instance.has_method("_draw_finish_marker"):
+		_fail("Visible finish marker method is missing")
+		return
+	print("PASS: procedural layout has %d pickups, %d obstacles, length %.0f" % [pickup_states.size(), generated_obstacles.size(), generated_length])
 	pickup_states[0] = true
 	level_instance.set("collected", pickup_states)
 	level_instance.call("_finish_level")
