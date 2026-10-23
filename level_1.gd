@@ -23,6 +23,15 @@ var level_seed: int = 0
 var level_length: float = 4600.0
 var pickup_positions: Array[float] = []
 var obstacle_layout: Array[Dictionary] = []
+var spray_can_positions: Array[float] = []
+var shield_active := false
+var shield_invulnerability := 0.0
+var combo_count := 0
+var combo_timer := 0.0
+var run_score := 0
+var best_score := 0
+var best_score_path := "user://parkour_progress.cfg"
+var hit_flash_timer := 0.0
 
 var world_x := 0.0 # World coordinate of the player's feet; screen position stays fixed.
 var player_y := 0.0 # Top of the player's collision rectangle in level-local coordinates.
@@ -59,6 +68,7 @@ const PARALLAX_LAYER_DEFS := [
 
 func _ready() -> void:
 	_load_parallax_layers()
+	_load_best_score()
 	graffiti_full_texture = load("res://assets/graffiti/iluha_wall_full.png") as Texture2D
 	graffiti_partial_texture = load("res://assets/graffiti/iluha_wall_partial.png") as Texture2D
 	if graffiti_full_texture == null or graffiti_partial_texture == null:
@@ -93,6 +103,11 @@ func _pickup_rect(screen_x: float, ground: float) -> Rect2:
 
 func _process(delta: float) -> void:
 	character_anim_time += delta
+	combo_timer = maxf(0.0, combo_timer - delta)
+	if combo_timer <= 0.0:
+		combo_count = 0
+	shield_invulnerability = maxf(0.0, shield_invulnerability - delta)
+	hit_flash_timer = maxf(0.0, hit_flash_timer - delta)
 	if ended:
 		if painting:
 			paint_timer += delta
@@ -127,7 +142,7 @@ func _process(delta: float) -> void:
 
 	if climb_timer > 0.0:
 		climb_timer = maxf(0.0, climb_timer - delta)
-		world_x += RUN_SPEED * 1.6 * delta
+		world_x += _current_run_speed() * 1.6 * delta
 		var climb_progress := 1.0 - climb_timer / CLIMB_DURATION
 		player_vy = 0.0
 		player_y = _ground_y() - PLAYER_HEIGHT - sin(climb_progress * PI) * 135.0
@@ -136,7 +151,7 @@ func _process(delta: float) -> void:
 			on_ground = true
 			jump_count = 0
 	else:
-		world_x += (RUN_SPEED * 1.35 if slide_timer > 0.0 else RUN_SPEED) * delta
+		world_x += (_current_run_speed() * 1.35 if slide_timer > 0.0 else _current_run_speed()) * delta
 		player_vy += GRAVITY * delta
 		player_y += player_vy * delta
 	if climb_timer <= 0.0 and player_y + _player_height() >= _ground_y():
@@ -162,6 +177,18 @@ func _check_pickups() -> void:
 		var pickup_screen_x: float = pickup_positions[i] - world_x + player_x
 		if player_rect.intersects(_pickup_rect(pickup_screen_x, ground)):
 			collected[i] = true
+			_register_pickup()
+	for can_x in spray_can_positions:
+		var can_screen_x: float = can_x - world_x + player_x
+		if can_screen_x < player_x - 40.0 or can_screen_x > player_x + 40.0:
+			continue
+		if player_rect.intersects(Rect2(can_screen_x - 18.0, ground - 100.0, 36.0, 46.0)):
+			spray_can_positions.erase(can_x)
+			shield_active = true
+			run_score += 250
+			combo_count = mini(combo_count + 1, 9)
+			combo_timer = 3.0
+			return
 
 func _generate_level_layout() -> void:
 	level_length = snappedf(rng.randf_range(MIN_LEVEL_LENGTH, MAX_LEVEL_LENGTH), 100.0)
@@ -207,6 +234,23 @@ func _generate_level_layout() -> void:
 				break
 		if valid:
 			pickup_positions.append(candidate)
+	
+	# Rare spray cans grant one-hit protection; keep them clear of hazards and tokens.
+	var can_attempts := 0
+	while spray_can_positions.size() < 2 and can_attempts < 200:
+		can_attempts += 1
+		var can_candidate := rng.randf_range(500.0, level_length - 350.0)
+		var can_valid := true
+		for existing in pickup_positions:
+			if absf(existing - can_candidate) < 90.0:
+				can_valid = false
+				break
+		for obstacle in obstacle_layout:
+			if absf(float(obstacle["x"]) - can_candidate) < 150.0:
+				can_valid = false
+				break
+		if can_valid:
+			spray_can_positions.append(can_candidate)
 
 	if pickup_positions.size() < MIN_PICKUPS:
 		pickup_positions.clear()
@@ -214,8 +258,8 @@ func _generate_level_layout() -> void:
 		for index in MIN_PICKUPS:
 			pickup_positions.append(310.0 + spacing * float(index) + spacing * 0.5)
 	pickup_positions.sort()
-	print("Generated parkour run seed=%d length=%.0f pickups=%d obstacles=%d" % [
-		level_seed, level_length, pickup_positions.size(), obstacle_layout.size()
+	print("Generated parkour run seed=%d length=%.0f pickups=%d spray_cans=%d obstacles=%d" % [
+		level_seed, level_length, pickup_positions.size(), spray_can_positions.size(), obstacle_layout.size()
 	])
 
 func _obstacles() -> Array[Dictionary]:
@@ -260,12 +304,22 @@ func _check_obstacles() -> void:
 			continue
 		for obstacle_rect in _obstacle_rects(obstacle, obstacle_screen_x, ground):
 			if player_rect.intersects(obstacle_rect):
+				if shield_active and shield_invulnerability <= 0.0:
+					shield_active = false
+					shield_invulnerability = 1.1
+					hit_flash_timer = 0.55
+					world_x += 100.0
+					return
+				if shield_invulnerability > 0.0:
+					return
 				_finish_level(true)
 				return
 
 func _finish_level(failed: bool = false) -> void:
 	ended = true
 	painting = not failed
+	combo_count = 0
+	combo_timer = 0.0
 	paint_timer = 0.0
 	if failed:
 		result_text = "Не получилось!"
@@ -284,7 +338,36 @@ func _finish_level(failed: bool = false) -> void:
 		else:
 			result_text = "ОБЫЧНОЕ ГРАФФИТИ"
 			result_color = Color(0.72, 0.95, 0.72)
+	if not failed:
+		run_score += _collected_count() * 100
+	_save_best_score()
 	queue_redraw()
+
+func _current_run_speed() -> float:
+	return RUN_SPEED * (1.0 + 0.12 * clampf(world_x / level_length, 0.0, 1.0))
+
+func _register_pickup() -> void:
+	if combo_timer > 0.0:
+		combo_count = mini(combo_count + 1, 9)
+	else:
+		combo_count = 1
+	combo_timer = 3.0
+	run_score += 100 * combo_count
+
+func _load_best_score() -> void:
+	var config := ConfigFile.new()
+	if config.load(best_score_path) == OK:
+		best_score = int(config.get_value("progress", "best_score", 0))
+
+func _save_best_score() -> void:
+	if run_score <= best_score:
+		return
+	best_score = run_score
+	var config := ConfigFile.new()
+	config.set_value("progress", "best_score", best_score)
+	var error := config.save(best_score_path)
+	if error != OK:
+		push_warning("Could not save local best score: %s" % error_string(error))
 
 func _collected_count() -> int:
 	var total := 0
@@ -359,9 +442,19 @@ func _draw() -> void:
 		if not collected[i]:
 			var pickup_x: float = pickup_positions[i] - world_x + player_x
 			if pickup_x > -30 and pickup_x < w + 30:
-				draw_circle(Vector2(pickup_x, ground - 54), 15, Color(0.12, 0.85, 0.88))
-				draw_circle(Vector2(pickup_x, ground - 54), 8, Color(0.08, 0.16, 0.22))
+				var pulse := 1.0 + 0.12 * sin(character_anim_time * 5.0 + float(i))
+				draw_circle(Vector2(pickup_x, ground - 54), 15.0 * pulse, Color(0.12, 0.85, 0.88, 0.22))
+				draw_circle(Vector2(pickup_x, ground - 54), 12.0, Color(0.12, 0.85, 0.88))
+				draw_circle(Vector2(pickup_x, ground - 54), 6.0, Color(0.08, 0.16, 0.22))
 				draw_line(Vector2(pickup_x - 5, ground - 54), Vector2(pickup_x + 5, ground - 54), Color.WHITE, 3.0)
+	for can_x in spray_can_positions:
+		var can_screen_x: float = can_x - world_x + player_x
+		if can_screen_x > -40 and can_screen_x < w + 40:
+			var can_rect := Rect2(can_screen_x - 11.0, ground - 92.0, 22.0, 34.0)
+			draw_rect(can_rect.grow(5.0), Color(0.78, 0.32, 1.0, 0.2))
+			draw_rect(can_rect, Color(0.76, 0.3, 1.0))
+			draw_rect(Rect2(can_screen_x - 7.0, ground - 99.0, 14.0, 8.0), Color(0.94, 0.88, 1.0))
+			draw_line(Vector2(can_screen_x - 6.0, ground - 77.0), Vector2(can_screen_x + 6.0, ground - 77.0), Color.WHITE, 3.0)
 	for obstacle in _obstacles():
 		var ox: float = float(obstacle["x"]) - world_x + player_x
 		if ox > -80 and ox < w + 80:
@@ -387,6 +480,15 @@ func _draw() -> void:
 	draw_rect(Rect2(18, 18, (w - 36) * clampf(world_x / level_length, 0.0, 1.0), 8), Color(0.12, 0.85, 0.88))
 	_draw_finish_marker(w, ground, player_x)
 	draw_string(ThemeDB.fallback_font, Vector2(22, 48), "ГРАФФИТИ: %d/%d" % [_collected_count(), pickup_positions.size()], HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color.WHITE)
+	draw_string(ThemeDB.fallback_font, Vector2(22, 72), "ОЧКИ: %d  РЕКОРД: %d" % [run_score, best_score], HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.92, 0.95, 1.0))
+	if combo_count >= 2 and combo_timer > 0.0:
+		draw_string(ThemeDB.fallback_font, Vector2(w * 0.5 - 90.0, 54.0), "КОМБО x%d" % combo_count, HORIZONTAL_ALIGNMENT_CENTER, 180.0, 24, Color(1.0, 0.78, 0.25))
+	if shield_active:
+		draw_string(ThemeDB.fallback_font, Vector2(w - 210.0, 48.0), "ЗАЩИТА: 1 УДАР", HORIZONTAL_ALIGNMENT_RIGHT, 190.0, 16, Color(0.84, 0.58, 1.0))
+	elif shield_invulnerability > 0.0:
+		draw_string(ThemeDB.fallback_font, Vector2(w - 210.0, 48.0), "ЩИТ СРАБОТАЛ!", HORIZONTAL_ALIGNMENT_RIGHT, 190.0, 16, Color(0.84, 0.58, 1.0))
+	if hit_flash_timer > 0.0:
+		draw_rect(Rect2(Vector2.ZERO, size), Color(0.8, 0.3, 1.0, hit_flash_timer * 0.25))
 	draw_circle(Vector2(w * 0.14, h - 68), 45, Color(0.12, 0.48, 0.62, 0.92))
 	draw_string(ThemeDB.fallback_font, Vector2(w * 0.14 - 38, h - 61), "ПРЫЖОК", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color.WHITE)
 	draw_circle(Vector2(w * 0.50, h - 68), 45, Color(0.1, 0.35, 0.48, 0.92))
@@ -515,6 +617,7 @@ func _draw_result() -> void:
 		draw_string(ThemeDB.fallback_font, Vector2(20, h * 0.65), progress_label, HORIZONTAL_ALIGNMENT_CENTER, w - 40, 22, progress_color)
 		var heading := result_text
 		draw_string(ThemeDB.fallback_font, Vector2(24, h * 0.76), heading, HORIZONTAL_ALIGNMENT_CENTER, w - 48, 28, result_color)
+		draw_string(ThemeDB.fallback_font, Vector2(24, h * 0.80), "СЧЁТ: %d  •  РЕКОРД: %d" % [run_score, best_score], HORIZONTAL_ALIGNMENT_CENTER, w - 48, 20, Color(1.0, 0.88, 0.55))
 		draw_string(ThemeDB.fallback_font, Vector2(24, h * 0.84), "Нажми, чтобы пройти уровень ещё раз", HORIZONTAL_ALIGNMENT_CENTER, w - 48, 19, Color.WHITE)
 	else:
 		draw_string(ThemeDB.fallback_font, Vector2(24, h * 0.66), result_text, HORIZONTAL_ALIGNMENT_CENTER, w - 48, 32, result_color)
