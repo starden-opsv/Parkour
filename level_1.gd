@@ -7,14 +7,22 @@ const JUMP_SPEED := -520.0
 const SLIDE_DURATION := 0.78
 const CLIMB_DURATION := 0.82
 const CLIMB_RANGE := 105.0
-const LEVEL_LENGTH := 3300.0
+const MIN_LEVEL_LENGTH := 4200.0
+const MAX_LEVEL_LENGTH := 5000.0
 const PLAYER_X_RATIO := 0.22
 const PLAYER_WIDTH := 38.0
 const PLAYER_HEIGHT := 64.0
 const SLIDE_HEIGHT := 24.0
 const PICKUP_RADIUS := 15.0
 const DEBUG_HITBOXES := false
-const PICKUP_POSITIONS := [430.0, 650.0, 880.0, 1110.0, 1390.0, 1630.0, 1880.0, 2110.0, 2350.0, 2580.0]
+const MIN_PICKUPS := 14
+const MAX_PICKUPS := 18
+
+var rng := RandomNumberGenerator.new()
+var level_seed: int = 0
+var level_length: float = 4600.0
+var pickup_positions: Array[float] = []
+var obstacle_layout: Array[Dictionary] = []
 
 var world_x := 0.0 # World coordinate of the player's feet; screen position stays fixed.
 var player_y := 0.0 # Top of the player's collision rectangle in level-local coordinates.
@@ -27,6 +35,7 @@ var painting := false
 var paint_timer := 0.0
 var result_text := ""
 var result_color := Color.WHITE
+var finish_flash_time := 0.0
 var jump_requested := false
 var jump_count := 0
 var slide_requested := false
@@ -54,7 +63,11 @@ func _ready() -> void:
 	graffiti_partial_texture = load("res://assets/graffiti/iluha_wall_partial.png") as Texture2D
 	if graffiti_full_texture == null or graffiti_partial_texture == null:
 		push_warning("Graffiti mural texture failed to load; using vector fallback.")
-	for _i in PICKUP_POSITIONS.size():
+	rng.randomize()
+	level_seed = int(rng.randi())
+	rng.seed = level_seed
+	_generate_level_layout()
+	for _i in pickup_positions.size():
 		collected.append(false)
 	player_y = _ground_y() - PLAYER_HEIGHT
 	_setup_player_sprite()
@@ -134,7 +147,7 @@ func _process(delta: float) -> void:
 
 	_check_pickups()
 	_check_obstacles()
-	if world_x >= LEVEL_LENGTH and not ended:
+	if world_x >= level_length and not ended:
 		_finish_level()
 	_update_player_sprite()
 	queue_redraw()
@@ -143,21 +156,70 @@ func _check_pickups() -> void:
 	var player_rect := _player_rect()
 	var player_x := _player_screen_x()
 	var ground := _ground_y()
-	for i in PICKUP_POSITIONS.size():
+	for i in pickup_positions.size():
 		if collected[i]:
 			continue
-		var pickup_screen_x: float = float(PICKUP_POSITIONS[i]) - world_x + player_x
+		var pickup_screen_x: float = pickup_positions[i] - world_x + player_x
 		if player_rect.intersects(_pickup_rect(pickup_screen_x, ground)):
 			collected[i] = true
 
+func _generate_level_layout() -> void:
+	level_length = snappedf(rng.randf_range(MIN_LEVEL_LENGTH, MAX_LEVEL_LENGTH), 100.0)
+	pickup_positions.clear()
+	obstacle_layout.clear()
+
+	var obstacle_x := 620.0
+	var previous_kind := ""
+	var repeated_kind_count := 0
+	while obstacle_x < level_length - 380.0:
+		var roll := rng.randi_range(0, 99)
+		var kind := "jump"
+		if roll < 34:
+			kind = "slide"
+		elif roll < 67:
+			kind = "climb"
+		if kind == previous_kind:
+			repeated_kind_count += 1
+		else:
+			repeated_kind_count = 1
+		if repeated_kind_count >= 3:
+			kind = "jump" if previous_kind != "jump" else "slide"
+			repeated_kind_count = 1
+		obstacle_layout.append({"x": obstacle_x, "kind": kind})
+		previous_kind = kind
+		obstacle_x += rng.randf_range(410.0, 560.0)
+
+	var desired_pickups := rng.randi_range(MIN_PICKUPS, MAX_PICKUPS)
+	var attempts := 0
+	while pickup_positions.size() < desired_pickups and attempts < 500:
+		attempts += 1
+		var candidate := rng.randf_range(300.0, level_length - 260.0)
+		var valid := true
+		for existing in pickup_positions:
+			if absf(existing - candidate) < 165.0:
+				valid = false
+				break
+		if not valid:
+			continue
+		for obstacle in obstacle_layout:
+			if absf(float(obstacle["x"]) - candidate) < 115.0:
+				valid = false
+				break
+		if valid:
+			pickup_positions.append(candidate)
+
+	if pickup_positions.size() < MIN_PICKUPS:
+		pickup_positions.clear()
+		var spacing := (level_length - 620.0) / float(MIN_PICKUPS)
+		for index in MIN_PICKUPS:
+			pickup_positions.append(310.0 + spacing * float(index) + spacing * 0.5)
+	pickup_positions.sort()
+	print("Generated parkour run seed=%d length=%.0f pickups=%d obstacles=%d" % [
+		level_seed, level_length, pickup_positions.size(), obstacle_layout.size()
+	])
+
 func _obstacles() -> Array[Dictionary]:
-	return [
-		{"x": 760.0, "kind": "climb"},
-		{"x": 1280.0, "kind": "slide"},
-		{"x": 1800.0, "kind": "jump"},
-		{"x": 2240.0, "kind": "slide"},
-		{"x": 2760.0, "kind": "climb"}
-	]
+	return obstacle_layout
 
 func _obstacle_rects(obstacle: Dictionary, screen_x: float, ground: float) -> Array[Rect2]:
 	var rects: Array[Rect2] = []
@@ -322,8 +384,9 @@ func _draw() -> void:
 	if DEBUG_HITBOXES:
 		draw_rect(player_rect, Color(0.2, 1.0, 0.45, 0.95), false, 2.0)
 	draw_rect(Rect2(18, 18, w - 36, 8), Color(0.16, 0.22, 0.28))
-	draw_rect(Rect2(18, 18, (w - 36) * clampf(world_x / LEVEL_LENGTH, 0.0, 1.0), 8), Color(0.12, 0.85, 0.88))
-	draw_string(ThemeDB.fallback_font, Vector2(22, 48), "ГРАФФИТИ: %d" % _collected_count(), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color.WHITE)
+	draw_rect(Rect2(18, 18, (w - 36) * clampf(world_x / level_length, 0.0, 1.0), 8), Color(0.12, 0.85, 0.88))
+	_draw_finish_marker(w, ground, player_x)
+	draw_string(ThemeDB.fallback_font, Vector2(22, 48), "ГРАФФИТИ: %d/%d" % [_collected_count(), pickup_positions.size()], HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color.WHITE)
 	draw_circle(Vector2(w * 0.14, h - 68), 45, Color(0.12, 0.48, 0.62, 0.92))
 	draw_string(ThemeDB.fallback_font, Vector2(w * 0.14 - 38, h - 61), "ПРЫЖОК", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color.WHITE)
 	draw_circle(Vector2(w * 0.50, h - 68), 45, Color(0.1, 0.35, 0.48, 0.92))
@@ -333,6 +396,22 @@ func _draw() -> void:
 	draw_string(ThemeDB.fallback_font, Vector2(w * 0.5 - 160, h - 14), "ПРЫЖОК • СКОЛЬЖЕНИЕ • КАРАБКАНИЕ", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0.85, 0.9, 0.96))
 	if ended:
 		_draw_result()
+
+func _draw_finish_marker(view_width: float, ground: float, player_x: float) -> void:
+	var marker_x := level_length - world_x + player_x
+	if marker_x < player_x + 24.0 or marker_x > view_width + 100.0:
+		return
+	var top := ground - 150.0
+	var glow := 0.5 + 0.5 * sin(character_anim_time * 4.0)
+	draw_line(Vector2(marker_x - 42.0, ground), Vector2(marker_x - 42.0, top + 18.0), Color(0.12, 0.85, 0.88, 0.8), 7.0)
+	draw_line(Vector2(marker_x + 42.0, ground), Vector2(marker_x + 42.0, top + 18.0), Color(0.12, 0.85, 0.88, 0.8), 7.0)
+	draw_line(Vector2(marker_x - 42.0, top + 18.0), Vector2(marker_x + 42.0, top + 18.0), Color(0.12, 0.85, 0.88, 0.8), 7.0)
+	draw_rect(Rect2(marker_x - 35.0, top + 25.0, 14.0, 14.0), Color.WHITE)
+	draw_rect(Rect2(marker_x - 21.0, top + 39.0, 14.0, 14.0), Color(0.08, 0.12, 0.18))
+	draw_rect(Rect2(marker_x - 7.0, top + 25.0, 14.0, 14.0), Color.WHITE)
+	draw_rect(Rect2(marker_x + 7.0, top + 39.0, 14.0, 14.0), Color(0.08, 0.12, 0.18))
+	draw_rect(Rect2(marker_x + 21.0, top + 25.0, 14.0, 14.0), Color.WHITE)
+	draw_string(ThemeDB.fallback_font, Vector2(marker_x - 58.0, top - 12.0), "ФИНИШ", HORIZONTAL_ALIGNMENT_CENTER, 116.0, 22, Color(0.3, 1.0, 0.88, 0.65 + glow * 0.35))
 
 func _setup_player_sprite() -> void:
 	player_sprite = AnimatedSprite2D.new()
