@@ -258,6 +258,22 @@ func _generate_level_layout() -> void:
 		for index in MIN_PICKUPS:
 			pickup_positions.append(310.0 + spacing * float(index) + spacing * 0.5)
 	pickup_positions.sort()
+	# Deterministic fallback keeps the rare bonus available even in crowded random layouts.
+	var fallback_x := 420.0
+	while spray_can_positions.size() < 2 and fallback_x < level_length - 250.0:
+		var fallback_valid := true
+		for existing in pickup_positions:
+			if absf(existing - fallback_x) < 105.0:
+				fallback_valid = false
+				break
+		for obstacle in obstacle_layout:
+			if absf(float(obstacle["x"]) - fallback_x) < 155.0:
+				fallback_valid = false
+				break
+		if fallback_valid:
+			spray_can_positions.append(fallback_x)
+		fallback_x += 45.0
+	spray_can_positions.sort()
 	print("Generated parkour run seed=%d length=%.0f pickups=%d spray_cans=%d obstacles=%d" % [
 		level_seed, level_length, pickup_positions.size(), spray_can_positions.size(), obstacle_layout.size()
 	])
