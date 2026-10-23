@@ -1,4 +1,4 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="PackedScene" path="res://assets/Universal Animation Library[Standard]/Unreal-Godot/UAL1_Standard.glb" id="1_character"]
 [ext_resource type="Script" path="res://tests/animation_preview.gd" id="2_script"]
@@ -8,6 +8,13 @@ size = Vector2(8, 8)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial_floor"]
 albedo_color = Color(0.16, 0.18, 0.21, 1)
+
+[sub_resource type="Environment" id="Environment_preview"]
+background_mode = 1
+background_color = Color(0.035, 0.045, 0.065, 1)
+ambient_light_source = 3
+ambient_light_color = Color(0.6, 0.65, 0.75, 1)
+ambient_light_energy = 0.7
 
 [node name="AnimationPreview" type="Node3D"]
 script = ExtResource("2_script")
@@ -27,13 +34,6 @@ shadow_enabled = true
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_preview")
-
-[sub_resource type="Environment" id="Environment_preview"]
-background_mode = 1
-background_color = Color(0.035, 0.045, 0.065, 1)
-ambient_light_source = 3
-ambient_light_color = Color(0.6, 0.65, 0.75, 1)
-ambient_light_energy = 0.7
 
 [node name="Camera3D" type="Camera3D" parent="."]
 position = Vector3(2.8, 1.8, 4.8)
