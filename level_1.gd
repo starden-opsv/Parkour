@@ -11,7 +11,7 @@ const PLAYER_WIDTH := 34.0
 const PLAYER_HEIGHT := 58.0
 const SLIDE_HEIGHT := 26.0
 const PICKUP_RADIUS := 15.0
-const DEBUG_HITBOXES := true
+const DEBUG_HITBOXES := false
 const PICKUP_POSITIONS := [430.0, 650.0, 880.0, 1110.0, 1390.0, 1630.0, 1880.0, 2110.0, 2350.0, 2580.0]
 
 var world_x := 0.0 # World coordinate of the player's feet; screen position stays fixed.
@@ -29,11 +29,15 @@ var jump_requested := false
 var jump_count := 0
 var slide_requested := false
 var character_anim_time := 0.0
+var player_sprite: AnimatedSprite2D
+var was_airborne := false
 
 func _ready() -> void:
 	for _i in PICKUP_POSITIONS.size():
 		collected.append(false)
 	player_y = _ground_y() - PLAYER_HEIGHT
+	_setup_player_sprite()
+	_update_player_sprite()
 	queue_redraw()
 
 func _ground_y() -> float:
@@ -96,6 +100,7 @@ func _process(delta: float) -> void:
 	_check_obstacles()
 	if world_x >= LEVEL_LENGTH and not ended:
 		_finish_level()
+	_update_player_sprite()
 	queue_redraw()
 
 func _check_pickups() -> void:
@@ -230,7 +235,6 @@ func _draw() -> void:
 					draw_rect(hitbox, Color(1.0, 0.2, 0.2, 0.9), false, 1.0)
 
 	var player_rect := _player_rect()
-	_draw_player_character(player_rect)
 	if DEBUG_HITBOXES:
 		draw_rect(player_rect, Color(0.2, 1.0, 0.45, 0.95), false, 2.0)
 	draw_rect(Rect2(18, 18, w - 36, 8), Color(0.16, 0.22, 0.28))
@@ -244,61 +248,85 @@ func _draw() -> void:
 	if ended:
 		_draw_result()
 
-func _draw_player_character(hitbox: Rect2) -> void:
-	# Temporary hand-drawn pixel-style character while the supplied archive is prepared
-	# as individual, verified sprite frames. Animation pose follows the actual movement state.
-	var crouching := slide_timer > 0.0
-	var airborne := not on_ground
-	var run_phase := int(character_anim_time * 12.0) % 4
-	var cx := hitbox.position.x + hitbox.size.x * 0.5
-	var bottom := hitbox.end.y
-	var skin := Color(1.0, 0.72, 0.48)
-	var hair := Color(0.12, 0.09, 0.16)
-	var shirt := Color(0.18, 0.78, 0.9)
-	var dark := Color(0.08, 0.12, 0.2)
-	var accent := Color(1.0, 0.35, 0.22)
-	if crouching:
-		# Low, forward-leaning slide pose; hitbox remains the authoritative collision shape.
-		draw_rect(Rect2(cx - 15, bottom - 20, 25, 12), shirt)
-		draw_rect(Rect2(cx + 4, bottom - 24, 12, 9), skin)
-		draw_rect(Rect2(cx + 7, bottom - 28, 10, 5), hair)
-		draw_rect(Rect2(cx - 18, bottom - 9, 18, 5), dark)
-		draw_rect(Rect2(cx + 2, bottom - 9, 17, 5), dark)
-		draw_rect(Rect2(cx - 9, bottom - 25, 8, 5), accent)
-	else:
-		var lean := 0.0
-		if airborne:
-			lean = -3.0 if jump_count >= 2 else 2.0
-		var head_y := hitbox.position.y + (8.0 if airborne else 7.0)
-		# Head, hair and a bright streetwear hoodie.
-		draw_rect(Rect2(cx - 7 + lean, head_y, 14, 13), skin)
-		draw_rect(Rect2(cx - 8 + lean, head_y - 3, 16, 6), hair)
-		draw_rect(Rect2(cx + 3 + lean, head_y + 4, 2, 2), Color.WHITE)
-		draw_rect(Rect2(cx - 7 + lean, head_y + 13, 14, 19), shirt)
-		draw_rect(Rect2(cx - 9 + lean, head_y + 17, 5, 12), skin)
-		draw_rect(Rect2(cx + 4 + lean, head_y + 17, 5, 10), skin)
-		draw_rect(Rect2(cx - 7 + lean, head_y + 30, 6, 13), dark)
-		draw_rect(Rect2(cx + 1 + lean, head_y + 30, 6, 13), dark)
-		if airborne:
-			# Tucked knees on first jump; wider pose and a short trail on double jump.
-			draw_rect(Rect2(cx - 12, bottom - 14, 8, 5), dark)
-			draw_rect(Rect2(cx + 4, bottom - 17, 8, 5), dark)
-			if jump_count >= 2:
-				draw_rect(Rect2(cx - 18, head_y + 16, 5, 4), accent)
-				draw_rect(Rect2(cx - 23, head_y + 21, 4, 3), Color(1.0, 0.75, 0.25))
+func _setup_player_sprite() -> void:
+	player_sprite = AnimatedSprite2D.new()
+	player_sprite.name = "PlayerSprite"
+	player_sprite.centered = true
+	player_sprite.scale = Vector2(0.48, 0.48)
+	player_sprite.z_index = 5
+	player_sprite.sprite_frames = SpriteFrames.new()
+	player_sprite.sprite_frames.add_animation("idle")
+	player_sprite.sprite_frames.set_animation_speed("idle", 7.0)
+	player_sprite.sprite_frames.set_animation_loop("idle", true)
+	player_sprite.sprite_frames.add_animation("run")
+	player_sprite.sprite_frames.set_animation_speed("run", 12.0)
+	player_sprite.sprite_frames.set_animation_loop("run", true)
+	player_sprite.sprite_frames.add_animation("jump")
+	player_sprite.sprite_frames.set_animation_speed("jump", 10.0)
+	player_sprite.sprite_frames.set_animation_loop("jump", false)
+	player_sprite.sprite_frames.add_animation("running_jump")
+	player_sprite.sprite_frames.set_animation_speed("running_jump", 10.0)
+	player_sprite.sprite_frames.set_animation_loop("running_jump", false)
+	player_sprite.sprite_frames.add_animation("fall")
+	player_sprite.sprite_frames.set_animation_speed("fall", 10.0)
+	player_sprite.sprite_frames.set_animation_loop("fall", true)
+	player_sprite.sprite_frames.add_animation("land")
+	player_sprite.sprite_frames.set_animation_speed("land", 12.0)
+	player_sprite.sprite_frames.set_animation_loop("land", false)
+	player_sprite.sprite_frames.add_animation("dash")
+	player_sprite.sprite_frames.set_animation_speed("dash", 12.0)
+	player_sprite.sprite_frames.set_animation_loop("dash", true)
+	_add_sprite_sheet("idle", "res://assets/character/character/idle/idle.png", 7, 1)
+	_add_sprite_sheet("run", "res://assets/character/character/running/running.png", 12, 12)
+	_add_sprite_sheet("jump", "res://assets/character/character/jumping/jump.png", 13, 13)
+	_add_sprite_sheet("running_jump", "res://assets/character/character/runningjump/runningjump.png", 7, 7)
+	_add_sprite_sheet("fall", "res://assets/character/character/falling/fall.png", 9, 3)
+	_add_sprite_sheet("land", "res://assets/character/character/landing/land.png", 8, 8)
+	_add_sprite_sheet("dash", "res://assets/character/character/dashing/dash.png", 5, 5)
+	add_child(player_sprite)
+	player_sprite.play("run")
+
+func _add_sprite_sheet(animation_name: String, resource_path: String, frame_count: int, columns: int) -> void:
+	var sheet := load(resource_path) as Texture2D
+	if sheet == null:
+		push_warning("Character sprite sheet could not be loaded: " + resource_path)
+		return
+	for frame_index in frame_count:
+		var atlas_frame := AtlasTexture.new()
+		atlas_frame.atlas = sheet
+		var column := frame_index % columns
+		var row := int(frame_index / columns)
+		atlas_frame.region = Rect2(column * 128, row * 128, 128, 128)
+		player_sprite.sprite_frames.add_frame(animation_name, atlas_frame)
+
+func _update_player_sprite() -> void:
+	if player_sprite == null:
+		return
+	var player_rect := _player_rect()
+	player_sprite.position = Vector2(player_rect.position.x + player_rect.size.x * 0.5, player_rect.end.y - 31.0)
+	player_sprite.visible = true
+	var next_animation := "run"
+	if slide_timer > 0.0:
+		next_animation = "dash"
+	elif not on_ground:
+		if player_vy > 120.0:
+			next_animation = "fall"
+		elif jump_count >= 2:
+			next_animation = "running_jump"
 		else:
-			# Four-frame leg/arm cycle gives the running pose visible motion.
-			if run_phase == 0 or run_phase == 2:
-				draw_rect(Rect2(cx - 8, bottom - 14, 7, 12), dark)
-				draw_rect(Rect2(cx + 1, bottom - 11, 8, 9), dark)
-			else:
-				draw_rect(Rect2(cx - 8, bottom - 10, 8, 8), dark)
-				draw_rect(Rect2(cx + 1, bottom - 15, 7, 13), dark)
-			draw_rect(Rect2(cx - 12, head_y + 18, 5, 8), skin)
-			draw_rect(Rect2(cx + 7, head_y + 16 + (2 if run_phase % 2 == 0 else 0), 5, 8), skin)
-	# Bright shoe pixels anchor the pose visually to the same feet used by collision.
-	draw_rect(Rect2(cx - 10, bottom - 4, 10, 4), accent)
-	draw_rect(Rect2(cx + 1, bottom - 4, 10, 4), accent)
+			next_animation = "jump"
+	else:
+		if was_airborne:
+			next_animation = "land"
+			was_airborne = false
+		elif player_sprite.animation == "land" and player_sprite.is_playing():
+			next_animation = "land"
+	if not on_ground:
+		was_airborne = true
+	if player_sprite.animation != next_animation:
+		player_sprite.play(next_animation)
+	elif not player_sprite.is_playing() and next_animation != "land":
+		player_sprite.play(next_animation)
 
 
 func _draw_result() -> void:
