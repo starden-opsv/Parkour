@@ -86,6 +86,33 @@ jobs:
               print(f"OK parallax: {path}")
           PY
 
+      - name: Verify graffiti mural assets and progression rules
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          root = Path("assets/graffiti")
+          required = {
+              "iluha_wall_full.svg": "ИЛЮХА",
+              "iluha_wall_partial.svg": "ИЛЮХА",
+          }
+          for filename, lettering in required.items():
+              path = root / filename
+              if not path.is_file():
+                  raise SystemExit(f"Missing graffiti mural: {path}")
+              content = path.read_text(encoding="utf-8")
+              if lettering not in content or "<svg" not in content:
+                  raise SystemExit(f"Invalid SVG or missing Cyrillic lettering: {path}")
+              print(f"OK graffiti mural: {path}")
+          script = Path("level_1.gd").read_text(encoding="utf-8")
+          for expected in ("iluha_wall_full.svg", "iluha_wall_partial.svg", "PICKUP_POSITIONS.size()", "ШЕДЕВР ЗАВЕРШЁН"):
+              if expected not in script:
+                  raise SystemExit(f"Missing graffiti progression reference: {expected}")
+          print("OK graffiti completion logic references")
+          PY
+
       - name: Import resources and parse project
         run: godot --headless --editor --path . --quit
 
