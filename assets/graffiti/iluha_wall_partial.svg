@@ -1,17 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540">
 <defs>
- <linearGradient id="wall" x2="0" y2="1"><stop stop-color="#626a72"/><stop offset="1" stop-color="#343b42"/></linearGradient>
- <pattern id="brick" width="96" height="48" patternUnits="userSpaceOnUse"><path d="M0 0H96 M0 24H96 M48 0V24 M0 24V48" fill="none" stroke="#242a30" stroke-width="3" opacity=".65"/></pattern>
- <linearGradient id="paint" x2="0" y2="1"><stop stop-color="#fff36a"/><stop offset=".48" stop-color="#ff4e91"/><stop offset="1" stop-color="#7b4dff"/></linearGradient>
- <clipPath id="halfPaint"><rect x="0" y="0" width="475" height="540"/></clipPath>
+ <linearGradient id="wall" x2="0" y2="1"><stop stop-color="#4c555e"/><stop offset="1" stop-color="#222a32"/></linearGradient>
+ <linearGradient id="paint" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#c5c5a2"/><stop offset="1" stop-color="#656a75"/></linearGradient>
+ <pattern id="brick" width="96" height="44" patternUnits="userSpaceOnUse"><path d="M0 0H96M0 22H96M48 0V22M0 22V44M96 22V44" stroke="#d3d8dc" stroke-opacity=".12" stroke-width="2"/></pattern>
+ <clipPath id="painted"><path d="M100 150H480V390H100Z"/></clipPath>
 </defs>
 <rect width="960" height="540" fill="url(#wall)"/><rect width="960" height="540" fill="url(#brick)"/>
-<g opacity=".24" font-family="DejaVu Sans, sans-serif" font-weight="900" font-style="italic" text-anchor="middle" paint-order="stroke fill"><text x="480" y="322" font-size="148" fill="#bfc3c8" stroke="#222831" stroke-width="28" letter-spacing="-8">ИЛЮХА</text></g>
-<g font-family="DejaVu Sans, sans-serif" font-weight="900" font-style="italic" text-anchor="middle" paint-order="stroke fill" clip-path="url(#halfPaint)"><text x="480" y="322" font-size="148" fill="url(#paint)" stroke="#151927" stroke-width="28" letter-spacing="-8">ИЛЮХА</text><text x="480" y="322" font-size="148" fill="url(#paint)" stroke="#d8dbe3" stroke-width="4" letter-spacing="-8">ИЛЮХА</text></g>
-<path d="M160 344q40 30 80 0t80 0" fill="none" stroke="#19f0d4" stroke-width="9" stroke-linecap="round" opacity=".9"/><g fill="#19f0d4"><path d="M235 349l-8 35h12l8-35z"/></g>
-<g fill="#aeb4ba" opacity=".3"><circle cx="822" cy="118" r="10"/><circle cx="870" cy="148" r="5"/><circle cx="795" cy="420" r="7"/></g>
-<g fill="#ff4e91"><circle cx="100" cy="132" r="8"/><circle cx="150" cy="95" r="5"/><circle cx="180" cy="420" r="6"/></g>
-<g fill="none" stroke="#ff4e91" stroke-width="7" stroke-linecap="round"><path d="M85 285l-20 30m32-20l-4 35"/></g>
-<text x="480" y="455" font-family="DejaVu Sans, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#858b92" letter-spacing="5">PARKOUR • KEEP PAINTING</text>
-<rect x="18" y="18" width="924" height="504" rx="8" fill="none" stroke="#858e97" stroke-width="5" opacity=".45"/>
+<g fill="#737b85" opacity=".55"><circle cx="120" cy="165" r="9"/><circle cx="185" cy="205" r="6"/><circle cx="800" cy="135" r="8"/><circle cx="760" cy="360" r="7"/><path d="M75 300l70-25-18 30zM800 220l50-20-20 30z"/></g>
+<!-- unfinished underpainting -->
+<g font-family="DejaVu Sans, Arial, sans-serif" font-weight="900" font-style="italic" text-anchor="middle" letter-spacing="-8">
+ <text x="490" y="303" font-size="142" fill="#10131b" stroke="#10131b" stroke-width="34" stroke-linejoin="round">ИЛЮХА</text>
+ <text x="484" y="294" font-size="142" fill="#44405a" stroke="#282634" stroke-width="27" stroke-linejoin="round">ИЛЮХА</text>
+ <text x="477" y="282" font-size="142" fill="#686d78" stroke="#a9aeb4" stroke-width="8" stroke-linejoin="round">ИЛЮХА</text>
+ <text x="477" y="282" font-size="142" fill="none" stroke="#272d36" stroke-width="4" stroke-linejoin="round">ИЛЮХА</text>
+</g>
+<!-- about half repainted: a crisp left-side spray stencil mask -->
+<g clip-path="url(#painted)" font-family="DejaVu Sans, Arial, sans-serif" font-weight="900" font-style="italic" text-anchor="middle" letter-spacing="-8">
+ <text x="490" y="303" font-size="142" fill="#0a0d18" stroke="#05070d" stroke-width="34" stroke-linejoin="round">ИЛЮХА</text>
+ <text x="484" y="294" font-size="142" fill="#4d2999" stroke="#17112f" stroke-width="27" stroke-linejoin="round">ИЛЮХА</text>
+ <text x="477" y="282" font-size="142" fill="#ff9c2f" stroke="#f7f4ff" stroke-width="10" stroke-linejoin="round">ИЛЮХА</text>
+ <text x="477" y="282" font-size="142" fill="none" stroke="#101526" stroke-width="4" stroke-linejoin="round">ИЛЮХА</text>
+</g>
+<path d="M480 130V390" stroke="#d5d9de" stroke-opacity=".5" stroke-width="2" stroke-dasharray="8 8"/>
+<text x="480" y="457" text-anchor="middle" font-family="DejaVu Sans, Arial" font-size="28" font-weight="900" letter-spacing="8" fill="#a7adb4">PARKOUR LEGEND</text>
 </svg>
