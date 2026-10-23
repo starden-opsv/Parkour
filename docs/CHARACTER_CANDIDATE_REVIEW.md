@@ -1,50 +1,56 @@
-# Character candidate review — Parkour Rush 2D
+# Character candidate review — Parkour Rush
 
 ## Decision status
 
-**Do not replace the current playable character with Imp or Puglin yet.** Keep the existing 2D character as the production baseline and treat the two Bestiary models as unapproved experiments.
+**Imp and Puglin remain unapproved experiments.** Keep the existing 2D character as the production baseline until the models and animation retargeting are tested in Godot. The animation library is now present in the repository, but its presence alone does not prove compatibility.
 
 ## Evidence in the repository
 
-The committed pack at `assets/Bestiary - Dungeon Monsters Kit[Standard]/` contains:
+The committed Bestiary pack at `assets/Bestiary - Dungeon Monsters Kit[Standard]/` contains:
 - `Exports/GLB (Godot-Unreal)/Imp.glb` (~9.4 MB)
 - `Exports/GLB (Godot-Unreal)/Puglin.glb` (~7.9 MB)
 - matching FBX exports and shared pack textures/license.
-- No wolf model and no animation files were found in the committed pack tree.
+- No wolf model and no animation files in the Bestiary pack.
+
+The committed Quaternius Universal Animation Library at `assets/Universal Animation Library[Standard]/Unreal-Godot/` contains:
+- `UAL1_Standard.glb` (~7.6 MB)
+- `UAL1_Standard_RM.glb` (~7.6 MB)
+- `README.txt` and `License.txt`, identifying the library license as CC0 1.0 Universal.
+- README explains that the `_RM` file has root motion baked into every animation; the non-`_RM` file has root motion disabled.
 
 ## Candidate assessment
 
 | Criterion | Imp | Puglin |
 |---|---|---|
 | Exists in repo as GLB | Yes | Yes |
-| Ready to inspect in Godot | Yes, GLB is the native-friendly option | Yes, GLB is the native-friendly option |
-| Animation included in this pack | Not evidenced; no animation files present | Not evidenced; no animation files present |
-| Fits an urban rooftop parkour protagonist | Unproven; fantasy dungeon creature is a strong art-direction mismatch risk | Unproven; fantasy dungeon creature is a strong art-direction mismatch risk |
-| Safe to make the production character now | No | No |
+| Ready to inspect in Godot | Yes | Yes |
+| Animation in Bestiary pack | No | No |
+| Separate animation library committed | Yes | Yes |
+| Rig/retarget compatibility verified | No | No |
+| Fits an urban rooftop parkour protagonist | Unproven; fantasy creature risks clashing with the urban direction | Unproven; fantasy creature risks clashing with the urban direction |
+| Approved for production | No | No |
 
-This is a repository-and-art-direction assessment, not a claim that the meshes or rigs have been tested in the Godot editor. The GitHub connector exposes the filenames and sizes but does not let this review inspect the models in a running Godot scene.
+This is a repository audit, not a claim that the models or animations have been opened and tested in the Godot editor.
 
-## Recommended next step
+## Next test sequence
 
-1. Keep the current 2D character as the fallback; do not pivot the game to 3D just to use these models.
-2. In Godot, import each GLB and verify that the skeleton exists and whether animation tracks are embedded.
-3. If the models are rigged but unanimated, test a small sample of the free Quaternius Universal Animation Library clips. Do not assume retargeting works until the skeleton mapping and motion are inspected.
-4. Test both candidates in a simple side-view rooftop scene at actual gameplay scale. Judge silhouette readability, jump/landing/slide pose readability, clipping, and mobile performance.
-5. Promote one only if it passes the checks. Otherwise reject both and continue with a stylized 2D runner character consistent with the existing project.
+1. Import the two Bestiary GLBs and the animation-library GLB in Godot 4.7.2.
+2. Inspect the imported scenes for skeletons, animation names, bone hierarchy, scale, and root-motion behavior.
+3. Test retargeting a small representative set: idle, run, jump, landing, and crouch/slide if available.
+4. Verify poses and motion visually on both Imp and Puglin. A successful import does not prove retargeting quality.
+5. Build a disposable side-view rooftop test scene. Check silhouette readability at phone size, foot sliding, deformation, clipping, collision alignment, and Android performance.
+6. Only promote a model if it passes these checks. Otherwise keep the 2D baseline and seek a character asset that matches the art direction.
 
 ## Acceptance gate
 
-A candidate is approved only when all of the following are verified:
-- [ ] Imports in the project's Godot 4.7.2 version without errors.
-- [ ] Idle/run/jump/landing/slide (or convincing equivalents) play without broken limbs or foot sliding.
-- [ ] Collision shape stays aligned during jump and slide.
-- [ ] Silhouette remains readable against the current city background at phone-sized view.
-- [ ] Performance is acceptable on an Android device.
-- [ ] License and attribution requirements are recorded before release.
+- [ ] Imports in Godot 4.7.2 without errors.
+- [ ] Idle/run/jump/landing/slide or convincing equivalents are available and look correct.
+- [ ] No broken limbs, severe foot sliding, or visible retargeting errors.
+- [ ] Collision shape remains aligned during jump and slide.
+- [ ] Character is readable against the rooftop background at phone-sized view.
+- [ ] Android performance is acceptable.
+- [ ] License is recorded before release.
 
-## Animation sources to test
+## License
 
-- [Quaternius Universal Animation Library](https://quaternius.itch.io/universal-animation-library) — free Standard option, CC0 as described by the publisher.
-- [Quaternius Universal Animation Library 2](https://quaternius.itch.io/universal-animation-library-2) — free Standard option, CC0 as described by the publisher.
-
-These are test candidates only. Compatibility with Imp or Puglin is **not verified**.
+The animation library's committed `License.txt` identifies CC0 1.0 Universal. Preserve the license file in the repository. Compatibility and actual in-game quality remain unverified.
