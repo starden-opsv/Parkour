@@ -1,25 +1,35 @@
-# Wolf character asset — Parkour Rush
+# Character asset investigation — Parkour Rush
 
-## Selected asset
+## Outcome
 
-- Pack: [Bestiary — Dungeon Monsters Kit](https://quaternius.com/packs/bestiarydungeonmonsterskit.html)
-- Free download: [Quaternius on itch.io](https://quaternius.itch.io/bestiary-dungeon-monsters-kit) — select **Download Now** and the **Standard** ZIP; no payment is required.
-- License: Quaternius Asset License (QAL), as stated on the pack page. Review the current license before shipping.
-- Formats listed by the author: FBX, GLB/glTF, Blender.
-- The pack includes rigged humanoid monsters but does not include animations.
+The wolf is **not present** in the repository's committed Bestiary pack. The actual GLB files present are **Imp** and **Puglin**. See [Character candidate review](CHARACTER_CANDIDATE_REVIEW.md) for the current decision gate.
 
-## Free animation source
+## Pack source
 
-- [Universal Animation Library](https://quaternius.itch.io/universal-animation-library) — Standard download is free (pay-what-you-want, choose $0) and CC0.
-- [Universal Animation Library 2](https://quaternius.itch.io/universal-animation-library-2) — separate free Standard download, CC0; includes additional movement and parkour clips.
-- Both libraries target humanoid rigs and support retargeting, but each clip must be tested on the wolf model. Quadruped-specific motion may not retarget naturally to a humanoid skeleton.
+- [Bestiary — Dungeon Monsters Kit](https://quaternius.com/packs/bestiarydungeonmonsterskit.html)
+- [Free Standard download](https://quaternius.itch.io/bestiary-dungeon-monsters-kit)
+- Pack license file committed in the repository: `assets/Bestiary - Dungeon Monsters Kit[Standard]/License_Standard.txt`
 
-## Local import location
+## Files already committed
 
-Place the downloaded wolf model under `res://_licensed_assets/quaternius_bestiary_wolf/` and keep the original ZIP outside the repository. The project `.gitignore` intentionally excludes `/_licensed_assets/` so marketplace/source archives are not accidentally committed.
+- `assets/Bestiary - Dungeon Monsters Kit[Standard]/Exports/GLB (Godot-Unreal)/Imp.glb`
+- `assets/Bestiary - Dungeon Monsters Kit[Standard]/Exports/GLB (Godot-Unreal)/Puglin.glb`
+- Matching FBX files and textures are also committed.
+- The repository tree contains no wolf model and no animation files inside this pack.
 
-Import the model into Godot 4.7.2, inspect its skeleton and animation tracks, then test retargeting with the free Standard animation clips. Required prototype checks: idle, run, jump, landing, slide/crouch, collision capsule alignment, and side-camera readability.
+## Free animation test sources
 
-## Repository status
+- [Universal Animation Library](https://quaternius.itch.io/universal-animation-library)
+- [Universal Animation Library 2](https://quaternius.itch.io/universal-animation-library-2)
 
-This document records the selected source and import plan. The actual model binary is not committed yet: it must first be downloaded from the official source and its files checked. Do not treat the character as integrated until the in-engine test passes.
+The publishers offer free Standard downloads and identify these animation libraries as CC0. **Compatibility with Imp or Puglin has not been verified.** Retargeting must be tested in Godot before the models can be accepted as playable characters.
+
+## Import/test procedure
+
+1. Import the committed GLB files directly from the pack's `Exports/GLB (Godot-Unreal)` directory.
+2. Inspect each imported scene for skeletons and embedded animation tracks.
+3. If no suitable clips are embedded, test animation retargeting with the libraries above.
+4. Test idle, run, jump, landing and slide/crouch in a side-view city scene.
+5. Reject either model if poses are unreadable at mobile scale, rig deformation is poor, collision alignment fails, or the fantasy style clashes with the urban parkour direction.
+
+Do not describe the wolf as selected or integrated until the actual wolf file is found and passes these checks.
