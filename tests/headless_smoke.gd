@@ -1,0 +1,58 @@
+extends SceneTree
+
+func _initialize() -> void:
+	call_deferred("_run_smoke_tests")
+
+func _run_smoke_tests() -> void:
+	var main_packed := load("res://main.tscn") as PackedScene
+	if main_packed == null:
+		_fail("Could not load main.tscn")
+		return
+	var main_instance := main_packed.instantiate()
+	root.add_child(main_instance)
+	await process_frame
+	if main_instance.get_node_or_null("Content/StartButton") == null:
+		_fail("Main menu start button is missing")
+		return
+	print("PASS: main menu scene instantiates and has a start button")
+	main_instance.queue_free()
+	await process_frame
+
+	var level_packed := load("res://level_1.tscn") as PackedScene
+	if level_packed == null:
+		_fail("Could not load level_1.tscn")
+		return
+	var level_instance := level_packed.instantiate()
+	root.add_child(level_instance)
+	await process_frame
+	var sprite := level_instance.get_node_or_null("PlayerSprite") as AnimatedSprite2D
+	if sprite == null:
+		_fail("PlayerSprite was not created")
+		return
+	var expected_frames := {
+		"idle": 7,
+		"run": 12,
+		"jump": 13,
+		"running_jump": 7,
+		"fall": 9,
+		"land": 8,
+		"dash": 5,
+	}
+	for animation_name in expected_frames:
+		if not sprite.sprite_frames.has_animation(animation_name):
+			_fail("Missing animation: " + animation_name)
+			return
+		var actual_frames: int = sprite.sprite_frames.get_frame_count(animation_name)
+		if actual_frames != expected_frames[animation_name]:
+			_fail("Animation %s expected %d frames, got %d" % [animation_name, expected_frames[animation_name], actual_frames])
+			return
+		print("PASS: animation %s has %d frames" % [animation_name, actual_frames])
+	if sprite.animation != "run":
+		_fail("Player should start with the run animation")
+		return
+	print("PASS: level scene instantiates and player starts running")
+	quit(0)
+
+func _fail(message: String) -> void:
+	push_error("SMOKE TEST FAILED: " + message)
+	quit(1)

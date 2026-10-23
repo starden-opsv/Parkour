@@ -1,0 +1,75 @@
+name: Godot project validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: godot-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Import resources and run project headlessly
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Godot 4.7.2
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.7.2
+          use-dotnet: false
+          include-templates: false
+
+      - name: Verify expected project files and sprite sheets
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f project.godot
+          test -f main.tscn
+          test -f level_1.gd
+          python - <<'PY'
+          from pathlib import Path
+          import struct
+
+          root = Path("assets/character/character")
+          expected = {
+              "idle/idle.png": (128, 896),
+              "running/running.png": (1536, 128),
+              "jumping/jump.png": (1664, 128),
+              "runningjump/runningjump.png": (896, 128),
+              "falling/fall.png": (384, 384),
+              "landing/land.png": (1024, 128),
+              "dashing/dash.png": (640, 128),
+          }
+          for relative, dimensions in expected.items():
+              path = root / relative
+              if not path.is_file():
+                  raise SystemExit(f"Missing sprite sheet: {path}")
+              with path.open("rb") as file:
+                  header = file.read(24)
+              if header[:8] != bytes([137, 80, 78, 71, 13, 10, 26, 10]):
+                  raise SystemExit(f"Not a PNG file: {path}")
+              actual = struct.unpack(">II", header[16:24])
+              if actual != dimensions:
+                  raise SystemExit(f"{path}: expected {dimensions}, got {actual}")
+              print(f"OK {path}: {actual[0]}x{actual[1]}")
+          PY
+
+      - name: Import resources and parse project
+        run: godot --headless --editor --path . --quit
+
+      - name: Start main scene headlessly
+        run: godot --headless --path . --quit-after 3
+
+      - name: Run headless scene and animation smoke tests
+        run: godot --headless --path . --script res://tests/headless_smoke.gd
