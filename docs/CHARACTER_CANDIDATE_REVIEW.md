@@ -1,56 +1,45 @@
-# Character candidate review — Parkour Rush
+# Character asset review — Parkour Rush
 
-## Decision status
+## Decision
 
-**Imp and Puglin remain unapproved experiments.** Keep the existing 2D character as the production baseline until the models and animation retargeting are tested in Godot. The animation library is now present in the repository, but its presence alone does not prove compatibility.
+**Use only the Universal Animation Library Standard pack for this character investigation.** Do not use `Imp.glb` or `Puglin.glb` as the player character or as animation-retargeting targets. Keep the existing 2D character and gameplay as the production baseline while the asset is investigated in isolation.
 
-## Evidence in the repository
+## Confirmed repository facts
 
-The committed Bestiary pack at `assets/Bestiary - Dungeon Monsters Kit[Standard]/` contains:
-- `Exports/GLB (Godot-Unreal)/Imp.glb` (~9.4 MB)
-- `Exports/GLB (Godot-Unreal)/Puglin.glb` (~7.9 MB)
-- matching FBX exports and shared pack textures/license.
-- No wolf model and no animation files in the Bestiary pack.
+The committed Universal Animation Library is located at `assets/Universal Animation Library[Standard]/Unreal-Godot/` and contains:
 
-The committed Quaternius Universal Animation Library at `assets/Universal Animation Library[Standard]/Unreal-Godot/` contains:
 - `UAL1_Standard.glb` (~7.6 MB)
 - `UAL1_Standard_RM.glb` (~7.6 MB)
-- `README.txt` and `License.txt`, identifying the library license as CC0 1.0 Universal.
-- README explains that the `_RM` file has root motion baked into every animation; the non-`_RM` file has root motion disabled.
+- `README.txt` and `License.txt`; the license identifies CC0 1.0 Universal.
+- The README describes `UAL1_Standard.glb` as the variant without baked root motion and `UAL1_Standard_RM.glb` as the variant with root motion baked into animations.
 
-## Candidate assessment
+The repository also contains a separate Bestiary pack, but `Imp.glb` and `Puglin.glb` are explicitly excluded from this project decision and must not be used for the player-character experiment.
 
-| Criterion | Imp | Puglin |
-|---|---|---|
-| Exists in repo as GLB | Yes | Yes |
-| Ready to inspect in Godot | Yes | Yes |
-| Animation in Bestiary pack | No | No |
-| Separate animation library committed | Yes | Yes |
-| Rig/retarget compatibility verified | No | No |
-| Fits an urban rooftop parkour protagonist | Unproven; fantasy creature risks clashing with the urban direction | Unproven; fantasy creature risks clashing with the urban direction |
-| Approved for production | No | No |
+## What is not yet verified
 
-This is a repository audit, not a claim that the models or animations have been opened and tested in the Godot editor.
+Repository file presence and animation names do not establish that either UAL GLB contains a complete, visually usable character mesh, materials, skeleton, and animations in Godot. No claim is made here that the GLBs have been successfully inspected in the Godot editor or tested on Android.
 
-## Next test sequence
+## Investigation order
 
-1. Import the two Bestiary GLBs and the animation-library GLB in Godot 4.7.2.
-2. Inspect the imported scenes for skeletons, animation names, bone hierarchy, scale, and root-motion behavior.
-3. Test retargeting a small representative set: idle, run, jump, landing, and crouch/slide if available.
-4. Verify poses and motion visually on both Imp and Puglin. A successful import does not prove retargeting quality.
-5. Build a disposable side-view rooftop test scene. Check silhouette readability at phone size, foot sliding, deformation, clipping, collision alignment, and Android performance.
-6. Only promote a model if it passes these checks. Otherwise keep the 2D baseline and seek a character asset that matches the art direction.
+1. Inspect `UAL1_Standard.glb` in Godot 4.7.2 first.
+2. Establish whether it contains a complete character mesh and materials, a skeleton/rig, animation tracks, or only animation data.
+3. Record the imported scene tree, mesh and material resources, skeleton node and bone hierarchy, animation names, and clip durations.
+4. If the non-root-motion file contains the complete usable character, create a separate preview scene and test idle, run, jump, landing, and crouch/slide-like motions where available.
+5. Inspect `UAL1_Standard_RM.glb` only as a comparison if needed; do not combine the two variants blindly.
+6. Keep all experimentation outside `main.tscn` and the existing playable 2D path until there is evidence to justify a change.
+7. If the GLB does not contain a usable character mesh, identify the specific missing component before choosing a compatible character asset. Do not fall back to Imp or Puglin.
 
 ## Acceptance gate
 
-- [ ] Imports in Godot 4.7.2 without errors.
-- [ ] Idle/run/jump/landing/slide or convincing equivalents are available and look correct.
-- [ ] No broken limbs, severe foot sliding, or visible retargeting errors.
-- [ ] Collision shape remains aligned during jump and slide.
-- [ ] Character is readable against the rooftop background at phone-sized view.
-- [ ] Android performance is acceptable.
-- [ ] License is recorded before release.
+- [ ] Imported in Godot 4.7.2 without fatal errors.
+- [ ] The presence or absence of character geometry, materials, skeleton, and animation data is documented separately.
+- [ ] Exact animation names and durations are recorded from the imported resource.
+- [ ] A separate preview scene can display the selected character and play representative clips.
+- [ ] No severe deformation, persistent floor penetration, or unintended root-motion drift.
+- [ ] The existing 2D game and its validation checks remain unchanged and passing.
+- [ ] Android performance/export is checked before any production adoption.
+- [ ] The included CC0 license is preserved.
 
-## License
+## Current status
 
-The animation library's committed `License.txt` identifies CC0 1.0 Universal. Preserve the license file in the repository. Compatibility and actual in-game quality remain unverified.
+**Investigation pending.** The next required evidence is the actual imported node/resource structure and visual preview of `UAL1_Standard.glb`; do not infer that it is a ready-to-use protagonist from the filename or animation list alone.
