@@ -67,3 +67,16 @@ This section records the user's current design decision for the isolated prototy
 - One action button → randomly choose `Crouch_Fwd` or `Roll` on each valid press
 
 The prototype should keep movement and collisions deterministic and separate from the cosmetic animation choice. Do not integrate into the production 2D scene until animation timing, transitions, and collision behavior have been checked. Imp/Puglin remain excluded.
+
+
+## Obstacle climbing feasibility
+
+The verified clip subset does not yet establish a dedicated climb/vault/mantle animation. Do not claim that a ready-made climbing clip exists until the full 42-clip list has been checked for names and visually previewed for suitable poses.
+
+Recommended implementation options for the parkour prototype:
+- Low obstacle: use normal jump logic if the jump trajectory clears the obstacle; this is a jump-over, not a climb.
+- Medium obstacle: add or source a dedicated vault/mantle animation, or visually validate whether any existing clip can convincingly cover the motion. Drive character movement with gameplay code and avoid double-applying root motion.
+- Tall obstacle: require a distinct climb/mantle animation and a clearly defined top/landing state; do not fake it with the Roll clip.
+- Obstacle handling should be driven by collision/height classification and player/gameplay state. Animation must not determine collision results.
+
+Before implementation, inspect all 42 clip names from the diagnostic output and add any plausible climb/vault clips to the preview controls for visual validation. If no suitable clip exists, record that a dedicated animation must be obtained or authored.
