@@ -28,6 +28,7 @@ var result_color := Color.WHITE
 var jump_requested := false
 var jump_count := 0
 var slide_requested := false
+var character_anim_time := 0.0
 
 func _ready() -> void:
 	for _i in PICKUP_POSITIONS.size():
@@ -53,6 +54,7 @@ func _pickup_rect(screen_x: float, ground: float) -> Rect2:
 	return Rect2(screen_x - PICKUP_RADIUS, ground - 54.0 - PICKUP_RADIUS, PICKUP_RADIUS * 2.0, PICKUP_RADIUS * 2.0)
 
 func _process(delta: float) -> void:
+	character_anim_time += delta
 	if ended:
 		if painting:
 			paint_timer += delta
@@ -228,9 +230,7 @@ func _draw() -> void:
 					draw_rect(hitbox, Color(1.0, 0.2, 0.2, 0.9), false, 1.0)
 
 	var player_rect := _player_rect()
-	draw_rect(player_rect, Color(0.25, 0.72, 1.0))
-	draw_circle(Vector2(player_rect.position.x + 22, player_rect.position.y + 10), 4, Color.WHITE)
-	draw_rect(Rect2(player_rect.position.x - 3, player_rect.end.y - 4, 40, 5), Color(0.07, 0.1, 0.14))
+	_draw_player_character(player_rect)
 	if DEBUG_HITBOXES:
 		draw_rect(player_rect, Color(0.2, 1.0, 0.45, 0.95), false, 2.0)
 	draw_rect(Rect2(18, 18, w - 36, 8), Color(0.16, 0.22, 0.28))
@@ -243,6 +243,63 @@ func _draw() -> void:
 	draw_string(ThemeDB.fallback_font, Vector2(w * 0.5 - 112, h - 26), "ПРЫЖОК СЛЕВА • ПОДКАТ СПРАВА", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(0.85, 0.9, 0.96))
 	if ended:
 		_draw_result()
+
+func _draw_player_character(hitbox: Rect2) -> void:
+	# Temporary hand-drawn pixel-style character while the supplied archive is prepared
+	# as individual, verified sprite frames. Animation pose follows the actual movement state.
+	var crouching := slide_timer > 0.0
+	var airborne := not on_ground
+	var run_phase := int(character_anim_time * 12.0) % 4
+	var cx := hitbox.position.x + hitbox.size.x * 0.5
+	var bottom := hitbox.end.y
+	var skin := Color(1.0, 0.72, 0.48)
+	var hair := Color(0.12, 0.09, 0.16)
+	var shirt := Color(0.18, 0.78, 0.9)
+	var dark := Color(0.08, 0.12, 0.2)
+	var accent := Color(1.0, 0.35, 0.22)
+	if crouching:
+		# Low, forward-leaning slide pose; hitbox remains the authoritative collision shape.
+		draw_rect(Rect2(cx - 15, bottom - 20, 25, 12), shirt)
+		draw_rect(Rect2(cx + 4, bottom - 24, 12, 9), skin)
+		draw_rect(Rect2(cx + 7, bottom - 28, 10, 5), hair)
+		draw_rect(Rect2(cx - 18, bottom - 9, 18, 5), dark)
+		draw_rect(Rect2(cx + 2, bottom - 9, 17, 5), dark)
+		draw_rect(Rect2(cx - 9, bottom - 25, 8, 5), accent)
+	else:
+		var lean := 0.0
+		if airborne:
+			lean = -3.0 if jump_count >= 2 else 2.0
+		var head_y := hitbox.position.y + (8.0 if airborne else 7.0)
+		# Head, hair and a bright streetwear hoodie.
+		draw_rect(Rect2(cx - 7 + lean, head_y, 14, 13), skin)
+		draw_rect(Rect2(cx - 8 + lean, head_y - 3, 16, 6), hair)
+		draw_rect(Rect2(cx + 3 + lean, head_y + 4, 2, 2), Color.WHITE)
+		draw_rect(Rect2(cx - 7 + lean, head_y + 13, 14, 19), shirt)
+		draw_rect(Rect2(cx - 9 + lean, head_y + 17, 5, 12), skin)
+		draw_rect(Rect2(cx + 4 + lean, head_y + 17, 5, 10), skin)
+		draw_rect(Rect2(cx - 7 + lean, head_y + 30, 6, 13), dark)
+		draw_rect(Rect2(cx + 1 + lean, head_y + 30, 6, 13), dark)
+		if airborne:
+			# Tucked knees on first jump; wider pose and a short trail on double jump.
+			draw_rect(Rect2(cx - 12, bottom - 14, 8, 5), dark)
+			draw_rect(Rect2(cx + 4, bottom - 17, 8, 5), dark)
+			if jump_count >= 2:
+				draw_rect(Rect2(cx - 18, head_y + 16, 5, 4), accent)
+				draw_rect(Rect2(cx - 23, head_y + 21, 4, 3), Color(1.0, 0.75, 0.25))
+		else:
+			# Four-frame leg/arm cycle gives the running pose visible motion.
+			if run_phase == 0 or run_phase == 2:
+				draw_rect(Rect2(cx - 8, bottom - 14, 7, 12), dark)
+				draw_rect(Rect2(cx + 1, bottom - 11, 8, 9), dark)
+			else:
+				draw_rect(Rect2(cx - 8, bottom - 10, 8, 8), dark)
+				draw_rect(Rect2(cx + 1, bottom - 15, 7, 13), dark)
+			draw_rect(Rect2(cx - 12, head_y + 18, 5, 8), skin)
+			draw_rect(Rect2(cx + 7, head_y + 16 + (2 if run_phase % 2 == 0 else 0), 5, 8), skin)
+	# Bright shoe pixels anchor the pose visually to the same feet used by collision.
+	draw_rect(Rect2(cx - 10, bottom - 4, 10, 4), accent)
+	draw_rect(Rect2(cx + 1, bottom - 4, 10, 4), accent)
+
 
 func _draw_result() -> void:
 	var w := size.x
