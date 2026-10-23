@@ -5,7 +5,7 @@ const RUN_SPEED := 230.0
 const GRAVITY := 1150.0
 const JUMP_SPEED := -520.0
 const SLIDE_DURATION := 0.78
-const CLIMB_DURATION := 0.68
+const CLIMB_DURATION := 0.82
 const CLIMB_RANGE := 105.0
 const LEVEL_LENGTH := 3300.0
 const PLAYER_X_RATIO := 0.22
@@ -97,7 +97,7 @@ func _process(delta: float) -> void:
 
 	if climb_timer > 0.0:
 		climb_timer = maxf(0.0, climb_timer - delta)
-		world_x += RUN_SPEED * delta
+		world_x += RUN_SPEED * 1.6 * delta
 		var climb_progress := 1.0 - climb_timer / CLIMB_DURATION
 		player_vy = 0.0
 		player_y = _ground_y() - PLAYER_HEIGHT - sin(climb_progress * PI) * 135.0
@@ -353,11 +353,11 @@ func _update_player_sprite() -> void:
 		return
 	var player_rect := _player_rect()
 	player_sprite.position = Vector2(player_rect.position.x + player_rect.size.x * 0.5, player_rect.end.y - (12.0 if slide_timer > 0.0 else 31.0))
-	player_sprite.scale = Vector2(0.58, 0.30) if slide_timer > 0.0 else Vector2(0.48, 0.48)
+	player_sprite.scale = Vector2(0.48, 0.36) if slide_timer > 0.0 else Vector2(0.48, 0.48)
 	player_sprite.visible = true
 	var next_animation := "run"
 	if slide_timer > 0.0:
-		next_animation = "run"
+		next_animation = "dash"
 	elif not on_ground:
 		if player_vy > 120.0:
 			next_animation = "fall"
