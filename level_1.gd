@@ -6,9 +6,10 @@ const GRAVITY := 1150.0
 const JUMP_SPEED := -440.0
 const SLIDE_DURATION := 0.62
 const LEVEL_LENGTH := 3300.0
+const PLAYER_X_RATIO := 0.22
 const PICKUP_POSITIONS := [430.0, 650.0, 880.0, 1110.0, 1390.0, 1630.0, 1880.0, 2110.0, 2350.0, 2580.0]
 
-var world_x := 0.0
+var world_x := 0.0 # World coordinate of the player's feet; screen position stays fixed.
 var player_y := 0.0
 var player_vy := 0.0
 var on_ground := true
@@ -30,6 +31,9 @@ func _ready() -> void:
 
 func _ground_y() -> float:
 	return size.y * 0.78
+
+func _player_screen_x() -> float:
+	return size.x * PLAYER_X_RATIO
 
 func _process(delta: float) -> void:
 	if ended:
@@ -54,8 +58,9 @@ func _process(delta: float) -> void:
 	world_x += RUN_SPEED * delta
 	player_vy += GRAVITY * delta
 	player_y += player_vy * delta
-	if player_y >= _ground_y() - (26.0 if slide_timer > 0.0 else 58.0):
-		player_y = _ground_y() - (26.0 if slide_timer > 0.0 else 58.0)
+	var player_height := 26.0 if slide_timer > 0.0 else 58.0
+	if player_y >= _ground_y() - player_height:
+		player_y = _ground_y() - player_height
 		player_vy = 0.0
 		on_ground = true
 
@@ -66,22 +71,23 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 func _check_pickups() -> void:
-	var player_world := world_x + size.x * 0.22
+	# world_x is the player's world coordinate; do not add the screen offset here.
 	for i in PICKUP_POSITIONS.size():
-		if not collected[i] and absf(PICKUP_POSITIONS[i] - player_world) < 36.0:
+		if not collected[i] and absf(PICKUP_POSITIONS[i] - world_x) < 36.0:
 			collected[i] = true
 
-func _check_obstacles() -> void:
-	var player_world := world_x + size.x * 0.22
-	var obstacles := [
+func _obstacles() -> Array[Dictionary]:
+	return [
 		{"x": 760.0, "kind": "jump"},
 		{"x": 1280.0, "kind": "slide"},
 		{"x": 1800.0, "kind": "jump"},
 		{"x": 2240.0, "kind": "slide"},
 		{"x": 2760.0, "kind": "jump"}
 	]
-	for obstacle in obstacles:
-		if absf(float(obstacle.x) - player_world) < 28.0:
+
+func _check_obstacles() -> void:
+	for obstacle in _obstacles():
+		if absf(float(obstacle["x"]) - world_x) < 28.0:
 			var avoided: bool = (str(obstacle["kind"]) == "jump" and not on_ground) or (str(obstacle["kind"]) == "slide" and slide_timer > 0.0)
 			if not avoided:
 				_finish_level(true)
@@ -118,7 +124,6 @@ func _collected_count() -> int:
 	return total
 
 func _input(event: InputEvent) -> void:
-	# Handle touch directly so UI/control propagation cannot swallow the tap.
 	if event is InputEventScreenTouch and event.pressed:
 		_handle_press(event.position)
 	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
@@ -145,6 +150,7 @@ func _draw() -> void:
 	var w := size.x
 	var h := size.y
 	var ground := _ground_y()
+	var player_x := _player_screen_x()
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0.055, 0.09, 0.15))
 	draw_rect(Rect2(0, ground, w, h - ground), Color(0.12, 0.16, 0.19))
 	for i in range(0, int(w) + 80, 80):
@@ -155,34 +161,26 @@ func _draw() -> void:
 		draw_rect(Rect2(bx, ground - 100 - float((i * 17) % 60), 72, 120 + float((i * 17) % 60)), Color(0.075, 0.12, 0.18))
 	for i in PICKUP_POSITIONS.size():
 		if not collected[i]:
-			var px: float = float(PICKUP_POSITIONS[i]) - world_x + w * 0.22
-			if px > -30 and px < w + 30:
-				draw_circle(Vector2(px, ground - 54), 15, Color(0.12, 0.85, 0.88))
-				draw_circle(Vector2(px, ground - 54), 8, Color(0.08, 0.16, 0.22))
-				draw_line(Vector2(px - 5, ground - 54), Vector2(px + 5, ground - 54), Color.WHITE, 3.0)
-	var obstacles := [
-		{"x": 760.0, "kind": "jump"},
-		{"x": 1280.0, "kind": "slide"},
-		{"x": 1800.0, "kind": "jump"},
-		{"x": 2240.0, "kind": "slide"},
-		{"x": 2760.0, "kind": "jump"}
-	]
-	for obstacle in obstacles:
-		var ox := float(obstacle.x) - world_x + w * 0.22
-		if ox > -80 and ox < w + 80:
+			var pickup_x: float = float(PICKUP_POSITIONS[i]) - world_x + player_x
+			if pickup_x > -30 and pickup_x < w + 30:
+				draw_circle(Vector2(pickup_x, ground - 54), 15, Color(0.12, 0.85, 0.88))
+				draw_circle(Vector2(pickup_x, ground - 54), 8, Color(0.08, 0.16, 0.22))
+				draw_line(Vector2(pickup_x - 5, ground - 54), Vector2(pickup_x + 5, ground - 54), Color.WHITE, 3.0)
+	for obstacle in _obstacles():
+		var obstacle_x := float(obstacle["x"]) - world_x + player_x
+		if obstacle_x > -80 and obstacle_x < w + 80:
 			if str(obstacle["kind"]) == "jump":
-				draw_rect(Rect2(ox - 20, ground - 48, 40, 48), Color(0.9, 0.42, 0.22))
-				draw_line(Vector2(ox - 13, ground - 35), Vector2(ox + 13, ground - 35), Color(1.0, 0.8, 0.55), 3.0)
+				draw_rect(Rect2(obstacle_x - 20, ground - 48, 40, 48), Color(0.9, 0.42, 0.22))
+				draw_line(Vector2(obstacle_x - 13, ground - 35), Vector2(obstacle_x + 13, ground - 35), Color(1.0, 0.8, 0.55), 3.0)
 			else:
-				draw_rect(Rect2(ox - 28, ground - 90, 56, 12), Color(0.88, 0.32, 0.28))
-				draw_rect(Rect2(ox - 28, ground - 90, 8, 64), Color(0.88, 0.32, 0.28))
-				draw_rect(Rect2(ox + 20, ground - 90, 8, 64), Color(0.88, 0.32, 0.28))
-	var px := w * 0.22
-	var ph := 26.0 if slide_timer > 0.0 else 58.0
-	var py := player_y + (32.0 if slide_timer > 0.0 else 0.0)
-	draw_rect(Rect2(px - 17, py, 34, ph), Color(0.25, 0.72, 1.0))
-	draw_circle(Vector2(px + 5, py + 10), 4, Color.WHITE)
-	draw_rect(Rect2(px - 20, py + ph - 4, 40, 5), Color(0.07, 0.1, 0.14))
+				draw_rect(Rect2(obstacle_x - 28, ground - 90, 56, 12), Color(0.88, 0.32, 0.28))
+				draw_rect(Rect2(obstacle_x - 28, ground - 90, 8, 64), Color(0.88, 0.32, 0.28))
+				draw_rect(Rect2(obstacle_x + 20, ground - 90, 8, 64), Color(0.88, 0.32, 0.28))
+	var player_height := 26.0 if slide_timer > 0.0 else 58.0
+	var player_draw_y := player_y + (32.0 if slide_timer > 0.0 else 0.0)
+	draw_rect(Rect2(player_x - 17, player_draw_y, 34, player_height), Color(0.25, 0.72, 1.0))
+	draw_circle(Vector2(player_x + 5, player_draw_y + 10), 4, Color.WHITE)
+	draw_rect(Rect2(player_x - 20, player_draw_y + player_height - 4, 40, 5), Color(0.07, 0.1, 0.14))
 	draw_rect(Rect2(18, 18, w - 36, 8), Color(0.16, 0.22, 0.28))
 	draw_rect(Rect2(18, 18, (w - 36) * clampf(world_x / LEVEL_LENGTH, 0.0, 1.0), 8), Color(0.12, 0.85, 0.88))
 	draw_string(ThemeDB.fallback_font, Vector2(22, 48), "ГРАФФИТИ: %d" % _collected_count(), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color.WHITE)
