@@ -81,9 +81,11 @@ func _run_smoke_tests() -> void:
 	if level_instance.get("combo_count") != 2 or level_instance.get("run_score") != 300:
 		_fail("Pickup streak should award a 2x combo and 300 points")
 		return
+	level_instance.set("world_x", generated_length * 0.5)
 	if level_instance.call("_current_run_speed") <= 230.0:
 		_fail("Run speed should increase as the level progresses")
 		return
+	level_instance.set("world_x", 0.0)
 	print("PASS: combo scoring and progressive run speed")
 	pickup_states[0] = true
 	level_instance.set("collected", pickup_states)
