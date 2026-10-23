@@ -139,6 +139,8 @@ func _check_obstacles() -> void:
 	var player_x := _player_screen_x()
 	var ground := _ground_y()
 	for obstacle in _obstacles():
+		if climb_timer > 0.0 and str(obstacle["kind"]) == "climb":
+			continue
 		var obstacle_screen_x: float = float(obstacle["x"]) - world_x + player_x
 		if obstacle_screen_x < -80.0 or obstacle_screen_x > size.x + 80.0:
 			continue
@@ -303,11 +305,12 @@ func _update_player_sprite() -> void:
 	if player_sprite == null:
 		return
 	var player_rect := _player_rect()
-	player_sprite.position = Vector2(player_rect.position.x + player_rect.size.x * 0.5, player_rect.end.y - 31.0)
+	player_sprite.position = Vector2(player_rect.position.x + player_rect.size.x * 0.5, player_rect.end.y - (12.0 if slide_timer > 0.0 else 31.0))
+	player_sprite.scale = Vector2(0.58, 0.30) if slide_timer > 0.0 else Vector2(0.48, 0.48)
 	player_sprite.visible = true
 	var next_animation := "run"
 	if slide_timer > 0.0:
-		next_animation = "dash"
+		next_animation = "run"
 	elif not on_ground:
 		if player_vy > 120.0:
 			next_animation = "fall"
