@@ -1,13 +1,13 @@
 extends SceneTree
-## Read-only diagnostic for the Universal Animation Library and candidate character GLBs.
-## Run after Godot has imported the project:
+## Read-only inspection of the two Universal Animation Library Standard GLBs.
+## Run from the project root after Godot has imported the assets:
 ## godot --headless --path . --script res://tools/inspect_animation_assets.gd
+##
+## Imp.glb and Puglin.glb are intentionally excluded.
 
 const ASSET_PATHS := [
 	"res://assets/Universal Animation Library[Standard]/Unreal-Godot/UAL1_Standard.glb",
 	"res://assets/Universal Animation Library[Standard]/Unreal-Godot/UAL1_Standard_RM.glb",
-	"res://assets/Bestiary - Dungeon Monsters Kit[Standard]/Exports/GLB (Godot-Unreal)/Imp.glb",
-	"res://assets/Bestiary - Dungeon Monsters Kit[Standard]/Exports/GLB (Godot-Unreal)/Puglin.glb",
 ]
 
 func _initialize() -> void:
@@ -28,16 +28,18 @@ func _inspect_scene(asset_path: String) -> Dictionary:
 		"exists": ResourceLoader.exists(asset_path),
 		"load_error": "",
 		"node_types": {},
+		"meshes": [],
+		"materials": [],
 		"skeletons": [],
 		"animation_players": [],
 	}
 	if not ResourceLoader.exists(asset_path):
-		result["load_error"] = "ResourceLoader.exists returned false. Run editor import first and verify the path."
+		result["load_error"] = "Resource not found. Open the project in the Godot editor and wait for import to finish."
 		return result
 
 	var packed := load(asset_path) as PackedScene
 	if packed == null:
-		result["load_error"] = "Resource could not be loaded as PackedScene."
+		result["load_error"] = "Resource did not load as PackedScene. Check the file's Import mode in Godot."
 		return result
 
 	var instance := packed.instantiate()
@@ -45,8 +47,10 @@ func _inspect_scene(asset_path: String) -> Dictionary:
 		result["load_error"] = "PackedScene.instantiate returned null."
 		return result
 
+	root.add_child(instance)
 	_walk(instance, result)
-	instance.free()
+	instance.queue_free()
+	await process_frame
 	return result
 
 func _walk(node: Node, result: Dictionary) -> void:
@@ -54,6 +58,27 @@ func _walk(node: Node, result: Dictionary) -> void:
 	var type_counts: Dictionary = result["node_types"]
 	type_counts[type_name] = int(type_counts.get(type_name, 0)) + 1
 	result["node_types"] = type_counts
+
+	if node is MeshInstance3D:
+		var mesh_node := node as MeshInstance3D
+		var meshes: Array = result["meshes"]
+		meshes.append({
+			"node_path": str(mesh_node.get_path()),
+			"mesh_resource": mesh_node.mesh.resource_name if mesh_node.mesh != null else "",
+			"surface_count": mesh_node.mesh.get_surface_count() if mesh_node.mesh != null else 0,
+		})
+		result["meshes"] = meshes
+		if mesh_node.mesh != null:
+			for surface_index in range(mesh_node.mesh.get_surface_count()):
+				var material := mesh_node.get_active_material(surface_index)
+				if material != null:
+					var materials: Array = result["materials"]
+					var material_name := material.resource_name
+					if material_name.is_empty():
+						material_name = material.get_class()
+					if not materials.has(material_name):
+						materials.append(material_name)
+					result["materials"] = materials
 
 	if node is Skeleton3D:
 		var skeleton := node as Skeleton3D
