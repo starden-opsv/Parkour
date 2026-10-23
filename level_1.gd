@@ -50,8 +50,8 @@ const PARALLAX_LAYER_DEFS := [
 
 func _ready() -> void:
 	_load_parallax_layers()
-	graffiti_full_texture = load("res://assets/graffiti/iluha_wall_full.svg") as Texture2D
-	graffiti_partial_texture = load("res://assets/graffiti/iluha_wall_partial.svg") as Texture2D
+	graffiti_full_texture = load("res://assets/graffiti/iluha_wall_full.png") as Texture2D
+	graffiti_partial_texture = load("res://assets/graffiti/iluha_wall_partial.png") as Texture2D
 	if graffiti_full_texture == null or graffiti_partial_texture == null:
 		push_warning("Graffiti mural texture failed to load; using vector fallback.")
 	for _i in PICKUP_POSITIONS.size():
