@@ -90,7 +90,7 @@ func _process(delta: float) -> void:
 	world_x += (RUN_SPEED * 1.3 if slide_timer > 0.0 else RUN_SPEED) * delta
 	player_vy += GRAVITY * delta
 	player_y += player_vy * delta
-	if player_y + _player_height() >= _ground_y():
+	if climb_timer <= 0.0 and player_y + _player_height() >= _ground_y():
 		player_y = _ground_y() - _player_height()
 		player_vy = 0.0
 		on_ground = true
