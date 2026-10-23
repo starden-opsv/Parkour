@@ -16,7 +16,7 @@ func _initialize() -> void:
 func _inspect_all() -> void:
 	var report: Array[Dictionary] = []
 	for asset_path in ASSET_PATHS:
-		report.append(_inspect_scene(asset_path))
+		report.append(await _inspect_scene(asset_path))
 	print("ANIMATION_ASSET_DIAGNOSTIC_BEGIN")
 	print(JSON.stringify(report, "\t"))
 	print("ANIMATION_ASSET_DIAGNOSTIC_END")
