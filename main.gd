@@ -17,9 +17,10 @@ func _responsive_layout() -> void:
 	var viewport_size := get_viewport_rect().size
 	var portrait := viewport_size.y >= viewport_size.x
 
-	# Portrait: preserve the entire original image, allowing empty margins if needed.
-	# Landscape: fill the screen with the image, cropping only as much as necessary.
-	background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED if portrait else TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	# Always cover the full viewport. If aspect ratios differ, crop the image edges instead of showing black bars.
+	background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	start_button.custom_minimum_size.x = 220.0 if portrait else 240.0
+	start_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 
 	if portrait:
 		content.offset_left = 20.0
