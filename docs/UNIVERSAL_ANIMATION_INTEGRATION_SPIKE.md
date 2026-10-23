@@ -69,14 +69,23 @@ This section records the user's current design decision for the isolated prototy
 The prototype should keep movement and collisions deterministic and separate from the cosmetic animation choice. Do not integrate into the production 2D scene until animation timing, transitions, and collision behavior have been checked. Imp/Puglin remain excluded.
 
 
-## Obstacle climbing feasibility
+## Required feature: climb over an obstacle
 
-The verified clip subset does not yet establish a dedicated climb/vault/mantle animation. Do not claim that a ready-made climbing clip exists until the full 42-clip list has been checked for names and visually previewed for suitable poses.
+**User priority:** implement an actual obstacle climb/vault action, not only a normal jump over an obstacle.
 
-Recommended implementation options for the parkour prototype:
-- Low obstacle: use normal jump logic if the jump trajectory clears the obstacle; this is a jump-over, not a climb.
-- Medium obstacle: add or source a dedicated vault/mantle animation, or visually validate whether any existing clip can convincingly cover the motion. Drive character movement with gameplay code and avoid double-applying root motion.
-- Tall obstacle: require a distinct climb/mantle animation and a clearly defined top/landing state; do not fake it with the Roll clip.
-- Obstacle handling should be driven by collision/height classification and player/gameplay state. Animation must not determine collision results.
+### Animation strategy
+1. First inspect the complete list of 42 imported clips and visually preview any plausible climb, vault, mantle, step-up, or get-up motions. The clip names currently confirmed in the preview do not establish that a dedicated climbing animation is included.
+2. If a suitable existing clip is found, add it to the isolated preview and verify hand contact, torso movement, leg clearance, and landing pose.
+3. If no suitable clip exists, use a dedicated climb/vault animation from an allowed source or author a simple animation for the existing Standard skeleton. Do not use the excluded Imp/Puglin assets and do not present Roll as climbing.
+4. As a temporary prototype fallback only, combine appropriate existing motion clips if their poses can be connected without obvious snapping. This must pass visual review; merely chaining Jump and Roll is not an acceptable climb solution.
 
-Before implementation, inspect all 42 clip names from the diagnostic output and add any plausible climb/vault clips to the preview controls for visual validation. If no suitable clip exists, record that a dedicated animation must be obtained or authored.
+### Gameplay behavior
+- The obstacle detector classifies obstacles by height/reachability.
+- A valid climb/vault action moves the character to the obstacle's far/top side under deterministic gameplay code.
+- Animation controls appearance; it must not decide collision outcomes.
+- During the climb, prevent a second action from interrupting the move unless an explicit cancel point is implemented.
+- Finish in the correct run state after landing on or passing the obstacle.
+- Test low/medium/tall obstacle cases separately. Do not change the production 2D scene until the isolated prototype passes.
+
+### Next concrete investigation
+Run the Godot diagnostic script and inspect the full names/durations for all 42 clips; add any plausible clips to the preview controls. If none qualifies, source or create a dedicated climbing animation and document its license/source before use.
