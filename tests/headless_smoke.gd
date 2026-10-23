@@ -51,10 +51,13 @@ func _run_smoke_tests() -> void:
 		_fail("Player should start with the run animation")
 		return
 	print("PASS: level scene instantiates and player starts running")
-	if level_instance.get("graffiti_full_texture") == null or level_instance.get("graffiti_partial_texture") == null:
-		_fail("Graffiti mural variants did not load")
+	if not level_instance.has_method("_draw_wildstyle_mural"):
+		_fail("Seeded Wildstyle mural generator is missing")
 		return
-	print("PASS: both graffiti mural variants load")
+	if level_instance.get("level_seed") == 0:
+		_fail("Level seed must be initialized for deterministic graffiti")
+		return
+	print("PASS: seeded offline Wildstyle mural generator is available")
 	var pickup_states: Array = level_instance.get("collected")
 	if pickup_states.size() < 14 or pickup_states.size() > 18:
 		_fail("Expected 14-18 procedurally generated graffiti collectibles")

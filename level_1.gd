@@ -75,10 +75,7 @@ const PARALLAX_LAYER_DEFS := [
 func _ready() -> void:
 	_load_parallax_layers()
 	_load_best_score()
-	graffiti_full_texture = load("res://assets/graffiti/iluha_wall_full.png") as Texture2D
-	graffiti_partial_texture = load("res://assets/graffiti/iluha_wall_partial.png") as Texture2D
-	if graffiti_full_texture == null or graffiti_partial_texture == null:
-		push_warning("Graffiti mural texture failed to load; using vector fallback.")
+	# Wildstyle is generated locally from the level seed; no fixed name/art asset is required.
 	rng.randomize()
 	level_seed = int(rng.randi())
 	rng.seed = level_seed
@@ -693,12 +690,8 @@ func _draw_result() -> void:
 	if success:
 		# The wall is the end-of-level reward: unfinished unless every tag was collected.
 		var all_collected := _collected_count() == pickup_positions.size()
-		var mural := graffiti_full_texture if all_collected else graffiti_partial_texture
 		var mural_rect := Rect2(w * 0.16, h * 0.08, w * 0.68, h * 0.50)
-		if mural != null:
-			draw_texture_rect(mural, mural_rect, false)
-		else:
-			_draw_graffiti_fallback(mural_rect, all_collected)
+		_draw_wildstyle_mural(mural_rect, level_seed, all_collected)
 		var count := _collected_count()
 		var progress_label := "ГРАФФИТИ ЗАКРАШЕНО: %d/%d" % [count, pickup_positions.size()]
 		var progress_color := Color(0.38, 1.0, 0.78) if all_collected else Color(0.92, 0.76, 0.48)
@@ -713,14 +706,69 @@ func _draw_result() -> void:
 	draw_string(ThemeDB.fallback_font, Vector2(24, h * 0.94), "Собрано: %d/%d" % [_collected_count(), pickup_positions.size()], HORIZONTAL_ALIGNMENT_CENTER, w - 48, 16, Color.WHITE)
 
 
-func _draw_graffiti_fallback(rect: Rect2, fully_painted: bool) -> void:
-	# Keep the finish reward visible even if an SVG import fails on a device.
-	draw_rect(rect, Color(0.28, 0.31, 0.34))
-	for yy in range(1, 6):
-		draw_line(Vector2(rect.position.x, rect.position.y + rect.size.y * yy / 6.0), Vector2(rect.end.x, rect.position.y + rect.size.y * yy / 6.0), Color(0.16, 0.19, 0.22), 2.0)
-	for xx in range(1, 10):
-		draw_line(Vector2(rect.position.x + rect.size.x * xx / 10.0, rect.position.y), Vector2(rect.position.x + rect.size.x * xx / 10.0, rect.end.y), Color(0.16, 0.19, 0.22), 1.0)
-	var ink := Color(0.95, 0.3, 0.62) if fully_painted else Color(0.43, 0.32, 0.43)
-	var title_pos := Vector2(rect.position.x + rect.size.x * 0.08, rect.position.y + rect.size.y * 0.64)
-	draw_string(ThemeDB.fallback_font, title_pos + Vector2(4, 5), "ИЛЮХА", HORIZONTAL_ALIGNMENT_LEFT, rect.size.x * 0.84, 76, Color(0.04, 0.05, 0.08))
-	draw_string(ThemeDB.fallback_font, title_pos, "ИЛЮХА", HORIZONTAL_ALIGNMENT_LEFT, rect.size.x * 0.84, 76, ink)
+func _draw_wildstyle_mural(rect: Rect2, seed_value: int, fully_painted: bool) -> void:
+	# Deterministic, offline Wildstyle-inspired vector composition. Seed is fixed for the run.
+	var mural_rng := RandomNumberGenerator.new()
+	mural_rng.seed = seed_value ^ 0x57A11E
+	draw_rect(rect, Color(0.17, 0.20, 0.23))
+	# Concrete seams and restrained wall wear.
+	for row in range(1, 5):
+		var y := rect.position.y + rect.size.y * float(row) / 5.0
+		draw_line(Vector2(rect.position.x, y), Vector2(rect.end.x, y), Color(0.11, 0.14, 0.17), 2.0)
+	for col in range(1, 9):
+		var x := rect.position.x + rect.size.x * float(col) / 9.0
+		draw_line(Vector2(x, rect.position.y), Vector2(x, rect.end.y), Color(0.13, 0.16, 0.19), 1.0)
+	var palettes: Array = [
+		[Color("#ff315f"), Color("#ffb52e"), Color("#42f5d7")],
+		[Color("#b65cff"), Color("#35d7ff"), Color("#fff04a")],
+		[Color("#ff6b35"), Color("#f72585"), Color("#70e000")],
+		[Color("#00d1ff"), Color("#f7f7ff"), Color("#ff4d9d")]
+	]
+	var palette: Array = palettes[mural_rng.randi_range(0, palettes.size() - 1)]
+	var main_ink: Color = palette[0] if fully_painted else palette[0].darkened(0.55)
+	var secondary_ink: Color = palette[1] if fully_painted else palette[1].darkened(0.62)
+	var accent: Color = palette[2] if fully_painted else palette[2].darkened(0.60)
+	# Five connected angular "letter" blocks create a compact, interlocking tag silhouette.
+	var count := 5
+	var cell_w := rect.size.x * 0.155
+	var base_y := rect.position.y + rect.size.y * 0.63
+	for i in range(count):
+		var gx := rect.position.x + rect.size.x * 0.075 + float(i) * rect.size.x * 0.17
+		var tilt := mural_rng.randf_range(-0.10, 0.10) * rect.size.y
+		var points := PackedVector2Array([
+			Vector2(gx, base_y - rect.size.y * 0.10 + tilt),
+			Vector2(gx + cell_w * 0.26, base_y - rect.size.y * 0.50 + tilt),
+			Vector2(gx + cell_w * 0.58, base_y - rect.size.y * 0.42 - tilt),
+			Vector2(gx + cell_w, base_y - rect.size.y * 0.58 + tilt),
+			Vector2(gx + cell_w * 0.78, base_y - rect.size.y * 0.12),
+			Vector2(gx + cell_w * 0.48, base_y - rect.size.y * 0.23),
+			Vector2(gx + cell_w * 0.20, base_y - rect.size.y * 0.04)
+		])
+		var extrusion := PackedVector2Array()
+		for p in points:
+			extrusion.append(p + Vector2(5.0, 7.0))
+		draw_colored_polygon(extrusion, Color(0.035, 0.045, 0.07, 0.98))
+		draw_polyline(points, Color(0.025, 0.03, 0.05), 7.0, true)
+		draw_colored_polygon(points, main_ink if i % 2 == 0 else secondary_ink)
+		draw_polyline(points, Color(0.96, 0.96, 1.0, 0.95), 2.0, true)
+		# Inner angular cuts keep the glyphs graphic rather than simple blobs.
+		var cut_start := Vector2(gx + cell_w * 0.27, base_y - rect.size.y * 0.16 + tilt)
+		var cut_mid := Vector2(gx + cell_w * 0.48, base_y - rect.size.y * 0.34)
+		var cut_end := Vector2(gx + cell_w * 0.69, base_y - rect.size.y * 0.20 - tilt)
+		draw_polyline(PackedVector2Array([cut_start, cut_mid, cut_end]), accent, 3.0, true)
+	# Sharp directional extensions and spray marks reinforce the Wildstyle language.
+	for i in range(3):
+		var ax := rect.position.x + rect.size.x * (0.17 + float(i) * 0.30)
+		var ay := rect.position.y + rect.size.y * (0.30 + mural_rng.randf_range(-0.06, 0.06))
+		draw_polyline(PackedVector2Array([Vector2(ax, ay + 9.0), Vector2(ax + 18.0, ay), Vector2(ax + 11.0, ay + 1.0), Vector2(ax + 18.0, ay)]), accent, 3.0, true)
+	for i in range(48):
+		var sx := mural_rng.randf_range(rect.position.x + 5.0, rect.end.x - 5.0)
+		var sy := mural_rng.randf_range(rect.position.y + 5.0, rect.end.y - 5.0)
+		var radius := mural_rng.randf_range(0.8, 2.8)
+		draw_circle(Vector2(sx, sy), radius, Color(main_ink.r, main_ink.g, main_ink.b, mural_rng.randf_range(0.22, 0.62)))
+	# A few drips hang from the bottom edge of the lettering, not across gameplay.
+	for i in range(7):
+		var dx := rect.position.x + rect.size.x * mural_rng.randf_range(0.12, 0.88)
+		var dy := rect.position.y + rect.size.y * mural_rng.randf_range(0.68, 0.80)
+		draw_line(Vector2(dx, dy), Vector2(dx, dy + mural_rng.randf_range(5.0, 15.0)), secondary_ink, mural_rng.randf_range(1.0, 3.0))
+
