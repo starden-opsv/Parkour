@@ -1,0 +1,41 @@
+name: Rasterize graffiti murals
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'level_1.gd'
+      - 'assets/graffiti/iluha_wall_full.svg'
+      - 'assets/graffiti/iluha_wall_partial.svg'
+      - '.github/workflows/rasterize-graffiti.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  rasterize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install cairosvg
+      - name: Export full and partial murals to PNG
+        run: |
+          python - <<'PY'
+          import cairosvg
+          cairosvg.svg2png(url='assets/graffiti/iluha_wall_full.svg', write_to='assets/graffiti/iluha_wall_full.png', output_width=1440, output_height=810)
+          cairosvg.svg2png(url='assets/graffiti/iluha_wall_partial.svg', write_to='assets/graffiti/iluha_wall_partial.png', output_width=1440, output_height=810)
+          PY
+      - name: Commit generated PNG textures
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/graffiti/iluha_wall_full.png assets/graffiti/iluha_wall_partial.png
+          if git diff --cached --quiet; then
+            echo "PNG textures already up to date"
+          else
+            git commit -m "Add rasterized PNG graffiti textures"
+            git push
+          fi
