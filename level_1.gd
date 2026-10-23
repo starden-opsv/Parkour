@@ -36,6 +36,8 @@ var character_anim_time := 0.0
 var player_sprite: AnimatedSprite2D
 var was_airborne := false
 var parallax_layers: Array[Dictionary] = []
+var graffiti_full_texture: Texture2D
+var graffiti_partial_texture: Texture2D
 const PARALLAX_LAYER_DEFS := [
 	{"path": "res://assets/background/post_soviet_city_parallax/post_soviet_city_parallax/layer_2_stars.png", "speed": 0.015},
 	{"path": "res://assets/background/post_soviet_city_parallax/post_soviet_city_parallax/layer_3_moon.png", "speed": 0.02},
@@ -48,6 +50,10 @@ const PARALLAX_LAYER_DEFS := [
 
 func _ready() -> void:
 	_load_parallax_layers()
+	graffiti_full_texture = load("res://assets/graffiti/iluha_wall_full.svg") as Texture2D
+	graffiti_partial_texture = load("res://assets/graffiti/iluha_wall_partial.svg") as Texture2D
+	if graffiti_full_texture == null or graffiti_partial_texture == null:
+		push_warning("Graffiti mural texture failed to load; using vector fallback.")
 	for _i in PICKUP_POSITIONS.size():
 		collected.append(false)
 	player_y = _ground_y() - PLAYER_HEIGHT
@@ -204,8 +210,8 @@ func _finish_level(failed: bool = false) -> void:
 		result_color = Color(1.0, 0.38, 0.32)
 	else:
 		var count := _collected_count()
-		if count >= 9:
-			result_text = "УНИКАЛЬНОЕ ГРАФФИТИ"
+		if count == PICKUP_POSITIONS.size():
+			result_text = "ШЕДЕВР ЗАВЕРШЁН"
 			result_color = Color(0.45, 0.95, 1.0)
 		elif count >= 6:
 			result_text = "ЭПИЧЕСКОЕ ГРАФФИТИ"
@@ -413,25 +419,38 @@ func _update_player_sprite() -> void:
 func _draw_result() -> void:
 	var w := size.x
 	var h := size.y
-	draw_rect(Rect2(Vector2.ZERO, size), Color(0.015, 0.025, 0.05, 0.82))
-	if painting:
-		draw_rect(Rect2(w * 0.27, h * 0.16, w * 0.46, h * 0.55), Color(0.32, 0.34, 0.37))
-		for yy in range(0, 7):
-			draw_line(Vector2(w * 0.27, h * 0.2 + yy * 35), Vector2(w * 0.73, h * 0.2 + yy * 35), Color(0.23, 0.25, 0.28), 2)
-		for xx in range(0, 7):
-			draw_line(Vector2(w * 0.27 + xx * (w * 0.46 / 7.0), h * 0.16), Vector2(w * 0.27 + xx * (w * 0.46 / 7.0), h * 0.71), Color(0.23, 0.25, 0.28), 1)
-		if paint_timer > 0.45:
-			var center := Vector2(w * 0.5, h * 0.43)
-			var scale_factor := clampf((paint_timer - 0.45) / 1.4, 0.0, 1.0)
-			for i in range(5):
-				var angle := float(i) * TAU / 5.0
-				var point := center + Vector2(cos(angle) * 92.0, sin(angle) * 48.0) * scale_factor
-				draw_line(center, point, result_color, 13.0)
-			draw_string(ThemeDB.fallback_font, Vector2(w * 0.36, h * 0.46), "TAG!", HORIZONTAL_ALIGNMENT_LEFT, -1, 48, result_color)
-	var heading := result_text
-	if not painting:
-		draw_string(ThemeDB.fallback_font, Vector2(24, h * 0.66), heading, HORIZONTAL_ALIGNMENT_CENTER, w - 48, 32, result_color)
-		draw_string(ThemeDB.fallback_font, Vector2(24, h * 0.76), "Попробуй ещё раз", HORIZONTAL_ALIGNMENT_CENTER, w - 48, 24, Color.WHITE)
+	draw_rect(Rect2(Vector2.ZERO, size), Color(0.015, 0.025, 0.05, 0.88))
+	var success := result_text != "Не получилось!"
+	if success:
+		# The wall is the end-of-level reward: unfinished unless every tag was collected.
+		var all_collected := _collected_count() == PICKUP_POSITIONS.size()
+		var mural := graffiti_full_texture if all_collected else graffiti_partial_texture
+		var mural_rect := Rect2(w * 0.16, h * 0.08, w * 0.68, h * 0.50)
+		if mural != null:
+			draw_texture_rect(mural, mural_rect, false)
+		else:
+			_draw_graffiti_fallback(mural_rect, all_collected)
+		var count := _collected_count()
+		var progress_label := "ГРАФФИТИ ЗАКРАШЕНО: %d/%d" % [count, PICKUP_POSITIONS.size()]
+		var progress_color := Color(0.38, 1.0, 0.78) if all_collected else Color(0.92, 0.76, 0.48)
+		draw_string(ThemeDB.fallback_font, Vector2(20, h * 0.65), progress_label, HORIZONTAL_ALIGNMENT_CENTER, w - 40, 22, progress_color)
+		var heading := result_text
+		draw_string(ThemeDB.fallback_font, Vector2(24, h * 0.76), heading, HORIZONTAL_ALIGNMENT_CENTER, w - 48, 28, result_color)
+		draw_string(ThemeDB.fallback_font, Vector2(24, h * 0.84), "Нажми, чтобы пройти уровень ещё раз", HORIZONTAL_ALIGNMENT_CENTER, w - 48, 19, Color.WHITE)
 	else:
-		draw_string(ThemeDB.fallback_font, Vector2(24, h * 0.78), heading, HORIZONTAL_ALIGNMENT_CENTER, w - 48, 24, result_color)
-	draw_string(ThemeDB.fallback_font, Vector2(24, h * 0.9), "Собрано: %d   •   НАЖМИ, ЧТОБЫ НАЧАТЬ ЗАНОВО" % _collected_count(), HORIZONTAL_ALIGNMENT_CENTER, w - 48, 16, Color.WHITE)
+		draw_string(ThemeDB.fallback_font, Vector2(24, h * 0.66), result_text, HORIZONTAL_ALIGNMENT_CENTER, w - 48, 32, result_color)
+		draw_string(ThemeDB.fallback_font, Vector2(24, h * 0.76), "Попробуй ещё раз", HORIZONTAL_ALIGNMENT_CENTER, w - 48, 24, Color.WHITE)
+	draw_string(ThemeDB.fallback_font, Vector2(24, h * 0.94), "Собрано: %d/%d" % [_collected_count(), PICKUP_POSITIONS.size()], HORIZONTAL_ALIGNMENT_CENTER, w - 48, 16, Color.WHITE)
+
+
+func _draw_graffiti_fallback(rect: Rect2, fully_painted: bool) -> void:
+	# Keep the finish reward visible even if an SVG import fails on a device.
+	draw_rect(rect, Color(0.28, 0.31, 0.34))
+	for yy in range(1, 6):
+		draw_line(Vector2(rect.position.x, rect.position.y + rect.size.y * yy / 6.0), Vector2(rect.end.x, rect.position.y + rect.size.y * yy / 6.0), Color(0.16, 0.19, 0.22), 2.0)
+	for xx in range(1, 10):
+		draw_line(Vector2(rect.position.x + rect.size.x * xx / 10.0, rect.position.y), Vector2(rect.position.x + rect.size.x * xx / 10.0, rect.end.y), Color(0.16, 0.19, 0.22), 1.0)
+	var ink := Color(0.95, 0.3, 0.62) if fully_painted else Color(0.43, 0.32, 0.43)
+	var title_pos := Vector2(rect.position.x + rect.size.x * 0.08, rect.position.y + rect.size.y * 0.64)
+	draw_string(ThemeDB.fallback_font, title_pos + Vector2(4, 5), "ИЛЮХА", HORIZONTAL_ALIGNMENT_LEFT, rect.size.x * 0.84, 76, Color(0.04, 0.05, 0.08))
+	draw_string(ThemeDB.fallback_font, title_pos, "ИЛЮХА", HORIZONTAL_ALIGNMENT_LEFT, rect.size.x * 0.84, 76, ink)
