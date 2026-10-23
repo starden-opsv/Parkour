@@ -272,7 +272,7 @@ func _finish_level(failed: bool = false) -> void:
 		result_color = Color(1.0, 0.38, 0.32)
 	else:
 		var count := _collected_count()
-		if count == PICKUP_POSITIONS.size():
+		if count == pickup_positions.size():
 			result_text = "ШЕДЕВР ЗАВЕРШЁН"
 			result_color = Color(0.45, 0.95, 1.0)
 		elif count >= 6:
@@ -355,9 +355,9 @@ func _draw() -> void:
 	for i in range(0, int(w) + 80, 80):
 		var x := float(i) - fmod(world_x, 80.0)
 		draw_line(Vector2(x, ground + 18), Vector2(x + 34, ground + 18), Color(0.22, 0.28, 0.31), 2.0)
-	for i in PICKUP_POSITIONS.size():
+	for i in pickup_positions.size():
 		if not collected[i]:
-			var pickup_x: float = float(PICKUP_POSITIONS[i]) - world_x + player_x
+			var pickup_x: float = pickup_positions[i] - world_x + player_x
 			if pickup_x > -30 and pickup_x < w + 30:
 				draw_circle(Vector2(pickup_x, ground - 54), 15, Color(0.12, 0.85, 0.88))
 				draw_circle(Vector2(pickup_x, ground - 54), 8, Color(0.08, 0.16, 0.22))
@@ -502,7 +502,7 @@ func _draw_result() -> void:
 	var success := result_text != "Не получилось!"
 	if success:
 		# The wall is the end-of-level reward: unfinished unless every tag was collected.
-		var all_collected := _collected_count() == PICKUP_POSITIONS.size()
+		var all_collected := _collected_count() == pickup_positions.size()
 		var mural := graffiti_full_texture if all_collected else graffiti_partial_texture
 		var mural_rect := Rect2(w * 0.16, h * 0.08, w * 0.68, h * 0.50)
 		if mural != null:
@@ -510,7 +510,7 @@ func _draw_result() -> void:
 		else:
 			_draw_graffiti_fallback(mural_rect, all_collected)
 		var count := _collected_count()
-		var progress_label := "ГРАФФИТИ ЗАКРАШЕНО: %d/%d" % [count, PICKUP_POSITIONS.size()]
+		var progress_label := "ГРАФФИТИ ЗАКРАШЕНО: %d/%d" % [count, pickup_positions.size()]
 		var progress_color := Color(0.38, 1.0, 0.78) if all_collected else Color(0.92, 0.76, 0.48)
 		draw_string(ThemeDB.fallback_font, Vector2(20, h * 0.65), progress_label, HORIZONTAL_ALIGNMENT_CENTER, w - 40, 22, progress_color)
 		var heading := result_text
@@ -519,7 +519,7 @@ func _draw_result() -> void:
 	else:
 		draw_string(ThemeDB.fallback_font, Vector2(24, h * 0.66), result_text, HORIZONTAL_ALIGNMENT_CENTER, w - 48, 32, result_color)
 		draw_string(ThemeDB.fallback_font, Vector2(24, h * 0.76), "Попробуй ещё раз", HORIZONTAL_ALIGNMENT_CENTER, w - 48, 24, Color.WHITE)
-	draw_string(ThemeDB.fallback_font, Vector2(24, h * 0.94), "Собрано: %d/%d" % [_collected_count(), PICKUP_POSITIONS.size()], HORIZONTAL_ALIGNMENT_CENTER, w - 48, 16, Color.WHITE)
+	draw_string(ThemeDB.fallback_font, Vector2(24, h * 0.94), "Собрано: %d/%d" % [_collected_count(), pickup_positions.size()], HORIZONTAL_ALIGNMENT_CENTER, w - 48, 16, Color.WHITE)
 
 
 func _draw_graffiti_fallback(rect: Rect2, fully_painted: bool) -> void:
