@@ -1,0 +1,60 @@
+name: Extract character assets
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/extract-character.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Safely extract character archive
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          import shutil
+
+          archive = Path("character.zip")
+          if not archive.is_file():
+              raise SystemExit("character.zip is missing from repository root")
+          destination = Path("assets/character")
+          destination.mkdir(parents=True, exist_ok=True)
+          root = destination.resolve()
+          with ZipFile(archive) as zf:
+              entries = []
+              for info in zf.infolist():
+                  if info.is_dir():
+                      continue
+                  name = Path(info.filename)
+                  if name.is_absolute() or ".." in name.parts:
+                      raise SystemExit(f"Unsafe path in archive: {info.filename}")
+                  target = (destination / name).resolve()
+                  if target != root and root not in target.parents:
+                      raise SystemExit(f"Unsafe extraction target: {info.filename}")
+                  entries.append(info.filename)
+              if not entries:
+                  raise SystemExit("Archive contains no files")
+              zf.extractall(destination)
+          print(f"Extracted {len(entries)} files:")
+          for name in entries:
+              print(f" - {name}")
+          PY
+      - name: Commit extracted assets
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/character
+          if git diff --cached --quiet; then
+            echo "No new extracted assets to commit."
+          else
+            git commit -m "Extract character sprite assets"
+            git push
+          fi
