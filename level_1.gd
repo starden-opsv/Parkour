@@ -707,68 +707,101 @@ func _draw_result() -> void:
 
 
 func _draw_wildstyle_mural(rect: Rect2, seed_value: int, fully_painted: bool) -> void:
-	# Deterministic, offline Wildstyle-inspired vector composition. Seed is fixed for the run.
+	# Lettering-first mural: the word is the composition. All rendering is local/offline.
+	# A seeded variation changes accents and paint details, never the letter skeleton.
 	var mural_rng := RandomNumberGenerator.new()
 	mural_rng.seed = seed_value ^ 0x57A11E
-	draw_rect(rect, Color(0.17, 0.20, 0.23))
-	# Concrete seams and restrained wall wear.
+	var wall := Color("#252a31")
+	var mortar := Color("#1b2026")
+	draw_rect(rect, wall)
 	for row in range(1, 5):
 		var y := rect.position.y + rect.size.y * float(row) / 5.0
-		draw_line(Vector2(rect.position.x, y), Vector2(rect.end.x, y), Color(0.11, 0.14, 0.17), 2.0)
+		draw_line(Vector2(rect.position.x, y), Vector2(rect.end.x, y), mortar, 2.0)
 	for col in range(1, 9):
 		var x := rect.position.x + rect.size.x * float(col) / 9.0
-		draw_line(Vector2(x, rect.position.y), Vector2(x, rect.end.y), Color(0.13, 0.16, 0.19), 1.0)
+		draw_line(Vector2(x, rect.position.y), Vector2(x, rect.end.y), Color("#20252b"), 1.0)
+
 	var palettes: Array = [
-		[Color("#ff315f"), Color("#ffb52e"), Color("#42f5d7")],
-		[Color("#b65cff"), Color("#35d7ff"), Color("#fff04a")],
-		[Color("#ff6b35"), Color("#f72585"), Color("#70e000")],
-		[Color("#00d1ff"), Color("#f7f7ff"), Color("#ff4d9d")]
+		[Color("#ff315f"), Color("#ffbd38"), Color("#32e6d0")],
+		[Color("#b65cff"), Color("#39d8ff"), Color("#fff04a")],
+		[Color("#ff6b35"), Color("#ff3d9a"), Color("#a5ff3d")],
+		[Color("#16d9ff"), Color("#f7f7ff"), Color("#ff4d9d")]
 	]
 	var palette: Array = palettes[mural_rng.randi_range(0, palettes.size() - 1)]
-	var main_ink: Color = palette[0] if fully_painted else palette[0].darkened(0.55)
-	var secondary_ink: Color = palette[1] if fully_painted else palette[1].darkened(0.62)
-	var accent: Color = palette[2] if fully_painted else palette[2].darkened(0.60)
-	# Five connected angular "letter" blocks create a compact, interlocking tag silhouette.
-	var count := 5
-	var cell_w := rect.size.x * 0.155
-	var base_y := rect.position.y + rect.size.y * 0.63
-	for i in range(count):
-		var gx := rect.position.x + rect.size.x * 0.075 + float(i) * rect.size.x * 0.17
-		var tilt := mural_rng.randf_range(-0.10, 0.10) * rect.size.y
-		var points := PackedVector2Array([
-			Vector2(gx, base_y - rect.size.y * 0.10 + tilt),
-			Vector2(gx + cell_w * 0.26, base_y - rect.size.y * 0.50 + tilt),
-			Vector2(gx + cell_w * 0.58, base_y - rect.size.y * 0.42 - tilt),
-			Vector2(gx + cell_w, base_y - rect.size.y * 0.58 + tilt),
-			Vector2(gx + cell_w * 0.78, base_y - rect.size.y * 0.12),
-			Vector2(gx + cell_w * 0.48, base_y - rect.size.y * 0.23),
-			Vector2(gx + cell_w * 0.20, base_y - rect.size.y * 0.04)
-		])
-		var extrusion := PackedVector2Array()
-		for p in points:
-			extrusion.append(p + Vector2(5.0, 7.0))
-		draw_colored_polygon(extrusion, Color(0.035, 0.045, 0.07, 0.98))
-		draw_polyline(points, Color(0.025, 0.03, 0.05), 7.0, true)
-		draw_colored_polygon(points, main_ink if i % 2 == 0 else secondary_ink)
-		draw_polyline(points, Color(0.96, 0.96, 1.0, 0.95), 2.0, true)
-		# Inner angular cuts keep the glyphs graphic rather than simple blobs.
-		var cut_start := Vector2(gx + cell_w * 0.27, base_y - rect.size.y * 0.16 + tilt)
-		var cut_mid := Vector2(gx + cell_w * 0.48, base_y - rect.size.y * 0.34)
-		var cut_end := Vector2(gx + cell_w * 0.69, base_y - rect.size.y * 0.20 - tilt)
-		draw_polyline(PackedVector2Array([cut_start, cut_mid, cut_end]), accent, 3.0, true)
-	# Sharp directional extensions and spray marks reinforce the Wildstyle language.
-	for i in range(3):
-		var ax := rect.position.x + rect.size.x * (0.17 + float(i) * 0.30)
-		var ay := rect.position.y + rect.size.y * (0.30 + mural_rng.randf_range(-0.06, 0.06))
-		draw_polyline(PackedVector2Array([Vector2(ax, ay + 9.0), Vector2(ax + 18.0, ay), Vector2(ax + 11.0, ay + 1.0), Vector2(ax + 18.0, ay)]), accent, 3.0, true)
-	for i in range(48):
-		var sx := mural_rng.randf_range(rect.position.x + 5.0, rect.end.x - 5.0)
-		var sy := mural_rng.randf_range(rect.position.y + 5.0, rect.end.y - 5.0)
-		var radius := mural_rng.randf_range(0.8, 2.8)
-		draw_circle(Vector2(sx, sy), radius, Color(main_ink.r, main_ink.g, main_ink.b, mural_rng.randf_range(0.22, 0.62)))
-	# A few drips hang from the bottom edge of the lettering, not across gameplay.
-	for i in range(7):
-		var dx := rect.position.x + rect.size.x * mural_rng.randf_range(0.12, 0.88)
-		var dy := rect.position.y + rect.size.y * mural_rng.randf_range(0.68, 0.80)
-		draw_line(Vector2(dx, dy), Vector2(dx, dy + mural_rng.randf_range(5.0, 15.0)), secondary_ink, mural_rng.randf_range(1.0, 3.0))
+	var fill: Color = palette[0] if fully_painted else palette[0].darkened(0.58)
+	var highlight: Color = palette[1] if fully_painted else palette[1].darkened(0.62)
+	var accent: Color = palette[2] if fully_painted else palette[2].darkened(0.62)
+	var font := ThemeDB.fallback_font
+	var word := "PARKOUR"
+	var font_size := int(rect.size.y * 0.43)
+	var text_width := font.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	var max_width := rect.size.x * 0.83
+	if text_width > max_width:
+		font_size = int(float(font_size) * max_width / text_width)
+		text_width = font.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	var origin := Vector2(rect.position.x + (rect.size.x - text_width) * 0.5, rect.position.y + rect.size.y * 0.59)
 
+	# Large, overlapping typography first: deep extrusion, then thick black keyline.
+	# A small shear gives the word a forward-driving graffiti lean.
+	var shear := -0.13
+	var transform_origin := origin
+	var shear_matrix := Transform2D(Vector2(1.0, 0.0), Vector2(shear, 1.0), 0.0, transform_origin)
+	draw_set_transform_matrix(shear_matrix)
+	for depth in range(8, 0, -1):
+		var offset := Vector2(float(depth) * 1.4, float(depth) * 1.2)
+		draw_string(font, offset, word, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color("#070a10"))
+	# Several offsets create a continuous bold outline rather than thin decorative lines.
+	for offset in [
+		Vector2(-3, 0), Vector2(3, 0), Vector2(0, -3), Vector2(0, 3),
+		Vector2(-2, -2), Vector2(2, -2), Vector2(-2, 2), Vector2(2, 2)
+	]:
+		draw_string(font, offset, word, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color("#080b12"))
+	draw_string(font, Vector2.ZERO, word, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, fill)
+	draw_string(font, Vector2(0, -2), word, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, fill.lightened(0.12))
+	# Hard-edged inline highlight adds a deliberate painted finish without changing glyphs.
+	var baseline := Vector2(0, -float(font_size) * 0.17)
+	draw_line(baseline + Vector2(5, 0), baseline + Vector2(text_width * 0.76, 0), highlight, maxf(2.0, rect.size.y * 0.012))
+	draw_set_transform_matrix(Transform2D.IDENTITY)
+
+	# Angular arrows are attached to the word's outer silhouette, not randomly scattered over it.
+	var left := Vector2(rect.position.x + rect.size.x * 0.08, rect.position.y + rect.size.y * 0.48)
+	var right := Vector2(rect.end.x - rect.size.x * 0.08, rect.position.y + rect.size.y * 0.42)
+	var top := Vector2(rect.position.x + rect.size.x * 0.70, rect.position.y + rect.size.y * 0.20)
+	var arrow_width := maxf(3.0, rect.size.y * 0.018)
+	var left_arrow := PackedVector2Array([
+		left, left + Vector2(rect.size.x * 0.11, -rect.size.y * 0.055),
+		left + Vector2(rect.size.x * 0.075, rect.size.y * 0.005),
+		left + Vector2(rect.size.x * 0.14, rect.size.y * 0.02)
+	])
+	draw_polyline(left_arrow, Color("#070a10"), arrow_width + 4.0, true)
+	draw_polyline(left_arrow, accent, arrow_width, true)
+	var right_arrow := PackedVector2Array([
+		right, right + Vector2(-rect.size.x * 0.12, rect.size.y * 0.035),
+		right + Vector2(-rect.size.x * 0.075, -rect.size.y * 0.025),
+		right + Vector2(-rect.size.x * 0.16, -rect.size.y * 0.01)
+	])
+	draw_polyline(right_arrow, Color("#070a10"), arrow_width + 4.0, true)
+	draw_polyline(right_arrow, accent, arrow_width, true)
+	# Small crown-like shards break the top contour while keeping the lettering dominant.
+	var crown := PackedVector2Array([
+		top, top + Vector2(rect.size.x * 0.045, rect.size.y * 0.055),
+		top + Vector2(rect.size.x * 0.085, -rect.size.y * 0.015),
+		top + Vector2(rect.size.x * 0.11, rect.size.y * 0.045)
+	])
+	draw_polyline(crown, Color("#070a10"), arrow_width + 3.0, true)
+	draw_polyline(crown, highlight, arrow_width, true)
+
+	# Controlled spray halo and a handful of drips; the text remains clean and readable.
+	for i in range(72):
+		var angle := mural_rng.randf_range(0.0, TAU)
+		var radius := mural_rng.randf_range(rect.size.x * 0.22, rect.size.x * 0.48)
+		var center := Vector2(rect.position.x + rect.size.x * 0.5, rect.position.y + rect.size.y * 0.49)
+		var point := center + Vector2(cos(angle) * radius, sin(angle) * radius * 0.48)
+		if rect.has_point(point):
+			draw_circle(point, mural_rng.randf_range(0.7, 2.0), Color(fill.r, fill.g, fill.b, mural_rng.randf_range(0.12, 0.38)))
+	for i in range(5):
+		var drip_x := origin.x + text_width * mural_rng.randf_range(0.12, 0.88)
+		var drip_y := origin.y + mural_rng.randf_range(4.0, 12.0)
+		var drip_length := mural_rng.randf_range(5.0, 15.0)
+		draw_line(Vector2(drip_x, drip_y), Vector2(drip_x, drip_y + drip_length), Color("#080b12"), 4.0)
+		draw_line(Vector2(drip_x, drip_y), Vector2(drip_x, drip_y + drip_length), fill, 2.0)
