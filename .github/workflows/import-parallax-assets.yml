@@ -38,6 +38,9 @@ jobs:
           allowed = {".png", ".jpg", ".jpeg", ".webp", ".tga", ".svg", ".txt", ".md", ".json", ".license"}
           copied = 0
           for item in source.rglob("*"):
+              # Ignore macOS ZIP metadata; it is not a real texture.
+              if "__MACOSX" in item.parts or item.name.startswith("._"):
+                  continue
               if not item.is_file() or item.suffix.lower() not in allowed:
                   continue
               rel = item.relative_to(source)
