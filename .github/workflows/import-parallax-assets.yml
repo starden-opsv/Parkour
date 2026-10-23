@@ -1,0 +1,69 @@
+name: Import parallax background pack
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/import-parallax-assets.yml"
+      - "post_soviet_city_parallax.zip"
+
+permissions:
+  contents: write
+
+jobs:
+  extract-and-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Inspect and extract archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s post_soviet_city_parallax.zip
+          echo "=== Archive inventory ==="
+          unzip -l post_soviet_city_parallax.zip
+          mkdir -p assets/background/post_soviet_city_parallax
+          unzip -o post_soviet_city_parallax.zip -d /tmp/parallax-pack
+          python - <<'PY'
+          from pathlib import Path
+          import shutil
+          source = Path("/tmp/parallax-pack")
+          target = Path("assets/background/post_soviet_city_parallax")
+          allowed = {".png", ".jpg", ".jpeg", ".webp", ".tga", ".svg", ".txt", ".md", ".json", ".license"}
+          copied = 0
+          for item in source.rglob("*"):
+              if not item.is_file() or item.suffix.lower() not in allowed:
+                  continue
+              rel = item.relative_to(source)
+              dest = target / rel
+              dest.parent.mkdir(parents=True, exist_ok=True)
+              shutil.copy2(item, dest)
+              copied += 1
+              print(f"ASSET {dest} ({item.stat().st_size} bytes)")
+          if copied == 0:
+              raise SystemExit("Archive contained no supported image or license/metadata files")
+          images = [p for p in target.rglob("*") if p.is_file() and p.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp", ".tga", ".svg"}]
+          if not images:
+              raise SystemExit("No images found in archive")
+          print(f"Extracted {copied} files, including {len(images)} images")
+          PY
+
+      - name: Commit extracted assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/background/post_soviet_city_parallax
+          if git diff --cached --quiet; then
+            echo "No new extracted assets to commit."
+            exit 0
+          fi
+          git commit -m "Import post-Soviet city parallax background assets"
+          git push origin HEAD:main
