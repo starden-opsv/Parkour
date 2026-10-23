@@ -1,0 +1,41 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="PackedScene" path="res://assets/Universal Animation Library[Standard]/Unreal-Godot/UAL1_Standard.glb" id="1_character"]
+[ext_resource type="Script" path="res://tests/animation_preview.gd" id="2_script"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_floor"]
+size = Vector2(8, 8)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial_floor"]
+albedo_color = Color(0.16, 0.18, 0.21, 1)
+
+[node name="AnimationPreview" type="Node3D"]
+script = ExtResource("2_script")
+
+[node name="UAL1_Standard" parent="." instance=ExtResource("1_character")]
+position = Vector3(0, 0, 0)
+
+[node name="Floor" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.03, 0)
+mesh = SubResource("PlaneMesh_floor")
+surface_material_override/0 = SubResource("StandardMaterial_floor")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-45, -30, 0)
+light_energy = 1.4
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_preview")
+
+[sub_resource type="Environment" id="Environment_preview"]
+background_mode = 1
+background_color = Color(0.035, 0.045, 0.065, 1)
+ambient_light_source = 3
+ambient_light_color = Color(0.6, 0.65, 0.75, 1)
+ambient_light_energy = 0.7
+
+[node name="Camera3D" type="Camera3D" parent="."]
+position = Vector3(2.8, 1.8, 4.8)
+current = true
+fov = 42.0
