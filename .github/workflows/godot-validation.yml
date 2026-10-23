@@ -65,6 +65,36 @@ jobs:
               print(f"OK {path}: {actual[0]}x{actual[1]}")
           PY
 
+      - name: Verify committed 3D character and animation source assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          root = Path("assets")
+          required = [
+              root / "Universal Animation Library[Standard]/Unreal-Godot/UAL1_Standard.glb",
+              root / "Universal Animation Library[Standard]/Unreal-Godot/UAL1_Standard_RM.glb",
+              root / "Universal Animation Library[Standard]/README.txt",
+              root / "Universal Animation Library[Standard]/License.txt",
+              root / "Bestiary - Dungeon Monsters Kit[Standard]/Exports/GLB (Godot-Unreal)/Imp.glb",
+              root / "Bestiary - Dungeon Monsters Kit[Standard]/Exports/GLB (Godot-Unreal)/Puglin.glb",
+          ]
+          for path in required:
+              if not path.is_file() or path.stat().st_size == 0:
+                  raise SystemExit(f"Missing or empty 3D spike asset: {path}")
+              print(f"OK asset present: {path} ({path.stat().st_size} bytes)")
+
+          readme = (root / "Universal Animation Library[Standard]/README.txt").read_text(encoding="utf-8").lower()
+          license_text = (root / "Universal Animation Library[Standard]/License.txt").read_text(encoding="utf-8").lower()
+          if "root motion" not in readme:
+              raise SystemExit("Animation README no longer documents root-motion variants")
+          if "cc0" not in license_text:
+              raise SystemExit("Animation library license file does not contain the expected CC0 marker")
+          print("OK animation README and license markers")
+          PY
+
       - name: Verify parallax layer paths
         shell: bash
         run: |
