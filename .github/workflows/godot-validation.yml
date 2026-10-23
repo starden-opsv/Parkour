@@ -93,22 +93,13 @@ jobs:
           python - <<'PY'
           from pathlib import Path
 
-          root = Path("assets/graffiti")
-          required = ("iluha_wall_full.png", "iluha_wall_partial.png")
-          for filename in required:
-              path = root / filename
-              if not path.is_file():
-                  raise SystemExit(f"Missing raster graffiti mural: {path}")
-              with path.open("rb") as file:
-                  header = file.read(24)
-              if header[:8] != bytes([137, 80, 78, 71, 13, 10, 26, 10]):
-                  raise SystemExit(f"Graffiti mural is not a PNG: {path}")
-              print(f"OK raster graffiti mural: {path}")
           script = Path("level_1.gd").read_text(encoding="utf-8")
-          for expected in ("iluha_wall_full.png", "iluha_wall_partial.png", "pickup_positions.size()", "ШЕДЕВР ЗАВЕРШЁН"):
+          for expected in ("_draw_wildstyle_mural", "level_seed", "pickup_positions.size()", "ШЕДЕВР ЗАВЕРШЁН"):
               if expected not in script:
-                  raise SystemExit(f"Missing graffiti progression reference: {expected}")
-          print("OK graffiti completion logic references")
+                  raise SystemExit(f"Missing Wildstyle generator or progression reference: {expected}")
+          if "ИЛЮХА" in script:
+              raise SystemExit("Fixed-name graffiti must not be required by the generator")
+          print("OK seeded Wildstyle generator and graffiti progression references")
           PY
 
       - name: Import resources and parse project
