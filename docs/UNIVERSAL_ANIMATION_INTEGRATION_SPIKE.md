@@ -1,48 +1,49 @@
-# Universal Animation Library Integration Spike
+# Universal Animation Library — Standard Character Investigation
 
-Status: planned against repository assets; not yet imported or executed in Godot.
+Status: planned; the asset still needs to be inspected in Godot 4.7.2. No integration into the playable game is approved.
 
 ## Goal
 
-Determine whether the Universal Animation Library can be used with the committed Bestiary Imp/Puglin models in Godot 4.7.2 without damaging the existing 2D gameplay build. Do not replace the current 2D player or switch the game to 3D during this spike.
+Determine whether `assets/Universal Animation Library[Standard]/Unreal-Godot/UAL1_Standard.glb` contains a complete, usable character or only a rig/animation resource, and whether its supplied animations are suitable for an isolated parkour prototype.
+
+**Explicit exclusion:** Do not use `Imp.glb` or `Puglin.glb`. Do not retarget the library onto those models. Keep the current 2D player and gameplay as the production baseline.
 
 ## Confirmed repository facts
 
-- Animation files are under `assets/Universal Animation Library[Standard]/Unreal-Godot/`.
-- `UAL1_Standard.glb` is the non-root-motion variant according to the included README.
-- `UAL1_Standard_RM.glb` has root motion baked into its animations according to the included README.
+- `UAL1_Standard.glb` and `UAL1_Standard_RM.glb` are present in the Standard animation pack.
+- The included README identifies `UAL1_Standard.glb` as the non-root-motion variant.
+- The README identifies `UAL1_Standard_RM.glb` as the variant with root motion baked into the animations.
 - The included license states CC0 1.0 Universal.
-- The candidate character files currently committed are `Imp.glb` and `Puglin.glb`.
-- Repository inspection alone does not establish that the animation skeleton matches either character, that the files import correctly in Godot, or that the clips are suitable for parkour.
+- File presence alone does not establish that either GLB contains a complete character mesh, materials, skeleton, or a working imported animation library.
 
-## Spike sequence
+## Investigation sequence
 
-1. **Keep the current game stable.** Run the existing Godot validation workflow and record its result before adding any 3D scene to the main game.
-2. **Import without modifying gameplay.** Open the project with Godot 4.7.2 and let the editor import both animation GLBs and both character GLBs. Check the Output panel for import errors/warnings. Do not commit generated `.godot/` cache data.
-3. **Inspect animation source.** In Godot's Import/Scene view, record the imported node tree, skeleton node(s), animation names, duration, and whether clips contain root motion. Do not guess clip names before reading the imported AnimationPlayer/AnimationLibrary.
-4. **Inspect candidate rigs.** For Imp and Puglin separately, record the skeleton path and bone count. Compare bone names/hierarchy against the animation source. Matching bone count alone is not sufficient evidence of compatibility.
-5. **Retarget only if needed.** If skeletons differ, use Godot's supported SkeletonProfileHumanoid/retarget workflow only if the source and target rigs are actually humanoid and map cleanly. The Imp/Puglin body proportions may make some motions unusable; reject bad deformations rather than forcing a retarget.
-6. **Build an isolated preview scene.** Create a temporary test scene under a dedicated test folder; do not wire it into `main.tscn` or `level_1.tscn`. Display one model, a neutral floor, lighting, and a simple camera. Keep preview scene mobile-friendly and separate from the 2D game.
-7. **Evaluate clips visually.** Test idle, locomotion/run, jump/takeoff, airborne/fall, landing, and low/slide-like pose if the library contains them. Inspect foot sliding, root drift, limb twisting, clipping, pose readability, and whether transitions are possible. A clip name alone does not qualify it.
-8. **Compare root-motion variants.** For an endless runner where gameplay controls world speed, start evaluation with `UAL1_Standard.glb` (root motion disabled) to avoid animation moving the character independently of game logic. Compare the RM version only if there is a specific design need and root motion can be extracted/controlled deliberately.
-9. **Test performance/export.** Only after visual acceptance, run the headless CI checks and a real Android export/device test. GLB file size is not the same as runtime memory or GPU cost; inspect texture sizes/material count and test on target hardware.
-10. **Make a go/no-go decision.** Keep the existing 2D sprite character unless a 3D preview clearly improves the game's art direction, animation readability, mobile performance, and implementation effort.
+1. **Protect the baseline.** Keep `main.tscn`, `level_1.tscn`, and the existing 2D player unchanged. Do not connect the experiment to the game's main scene.
+2. **Import the Standard asset.** Open the project in Godot 4.7.2 and let the editor import `UAL1_Standard.glb`. Record all import errors and warnings. Do not commit generated `.godot/` cache data.
+3. **Inspect the imported scene tree.** Record node names and types. Specifically establish whether the scene contains a visible mesh, materials, a Skeleton3D, an AnimationPlayer or AnimationTree, and an animation library.
+4. **Inspect geometry and rig.** Record mesh/resource names, material assignments, skeleton path, bone count, and bone names/hierarchy. If no character mesh is present, state that explicitly rather than assuming the GLB is a complete protagonist.
+5. **Inspect animations.** Record exact imported animation names and durations from Godot. Check representative clips such as idle, walk/run, jump, landing, and crouch/roll only if those clips actually exist in the imported resource.
+6. **Build an isolated preview if a visible character is present.** Put the preview in a dedicated test location. Use a neutral floor and camera. Do not alter `main.tscn` or `level_1.tscn`.
+7. **Evaluate motion visually.** Check pose readability, deformation, foot sliding, clipping, floor penetration, and transitions. Clip names alone are not acceptance evidence.
+8. **Compare the root-motion variant only if needed.** Start with `UAL1_Standard.glb` for a game whose movement is controlled by gameplay code. Inspect the RM version separately only if there is a clear reason to compare it; avoid applying root motion twice.
+9. **Test Android only after desktop inspection succeeds.** Check resource/texture sizes, material count, export success, and target-device performance before considering adoption.
+10. **Write a go/no-go conclusion.** The decision must be based on imported resource evidence and a visual preview, not filename assumptions.
 
 ## Acceptance criteria
 
-- Existing `main.tscn`, `level_1.tscn`, and current 2D animation smoke tests still pass unchanged.
-- Both source GLBs import without fatal errors in the chosen Godot version.
-- A test scene can instantiate the selected character and play selected clips without missing resources.
-- A written mapping records exact source animation names and target actions.
-- Run, jump, fall, and landing are visually readable; no severe skeleton deformation or persistent floor penetration.
-- Character motion is controlled by gameplay code; root motion is not accidentally double-applied.
-- Android export succeeds and target-device performance is acceptable before adoption.
-- The 3D experiment is isolated and can be deleted without affecting the current game.
+- Existing 2D gameplay and current validation checks remain unchanged.
+- The imported scene tree and the presence/absence of mesh, materials, skeleton, and animation data are documented.
+- Exact animation names and durations are recorded from the imported resource.
+- If a complete character is present, an isolated preview can display it and play selected clips.
+- No severe deformation, persistent floor penetration, or uncontrolled root motion appears in the preview.
+- The experiment can be removed without affecting the playable 2D game.
+- Android export and target-device performance are checked before any production adoption.
+- The CC0 license file is preserved.
 
-## Required evidence before adoption
+## Evidence to record
 
-Attach to the review (as notes, not necessarily screenshots): Godot version, import warnings, animation names/durations, skeleton node paths, retarget mappings if any, selected root-motion variant, tested device/export result, and final go/no-go recommendation.
+Include the Godot version, import warnings, imported node tree, mesh/material resource names, skeleton path and bone hierarchy, exact animation names/durations, root-motion variant tested, preview result, and go/no-go recommendation. If any of these cannot be established, record it as unknown rather than guessing.
 
 ## Current decision
 
-**No-go for integration into the playable game until the spike passes.** This is a verification gate, not a rejection of the library. Preserve the current 2D game as the shipping baseline and evaluate the 3D character/animation as a separate prototype.
+**No-go for production integration until inspection and preview are complete.** The immediate task is to verify what `UAL1_Standard.glb` actually contains. The current 2D game remains the baseline, and Imp/Puglin remain excluded.
