@@ -1,10 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540">
-<defs><linearGradient id="wall" x2="0" y2="1"><stop stop-color="#626a72"/><stop offset="1" stop-color="#343b42"/></linearGradient><pattern id="brick" width="96" height="48" patternUnits="userSpaceOnUse"><path d="M0 0H96 M0 24H96 M48 0V24 M0 24V48" fill="none" stroke="#242a30" stroke-width="3" opacity=".65"/></pattern><linearGradient id="paint" x2="0" y2="1"><stop stop-color="#d9d35b"/><stop offset=".5" stop-color="#b34f73"/><stop offset="1" stop-color="#6754a4"/></linearGradient></defs>
+<defs>
+ <linearGradient id="wall" x2="0" y2="1"><stop stop-color="#626a72"/><stop offset="1" stop-color="#343b42"/></linearGradient>
+ <pattern id="brick" width="96" height="48" patternUnits="userSpaceOnUse"><path d="M0 0H96 M0 24H96 M48 0V24 M0 24V48" fill="none" stroke="#242a30" stroke-width="3" opacity=".65"/></pattern>
+ <linearGradient id="paint" x2="0" y2="1"><stop stop-color="#fff36a"/><stop offset=".48" stop-color="#ff4e91"/><stop offset="1" stop-color="#7b4dff"/></linearGradient>
+ <clipPath id="halfPaint"><rect x="0" y="0" width="475" height="540"/></clipPath>
+</defs>
 <rect width="960" height="540" fill="url(#wall)"/><rect width="960" height="540" fill="url(#brick)"/>
-<g opacity=".25" font-family="DejaVu Sans, sans-serif" font-weight="900" font-style="italic" text-anchor="middle" paint-order="stroke fill"><text x="480" y="322" font-size="148" fill="#c0c2c5" stroke="#222831" stroke-width="28" letter-spacing="-8">ИЛЮХА</text></g>
-<g font-family="DejaVu Sans, sans-serif" font-weight="900" font-style="italic" text-anchor="middle" paint-order="stroke fill"><text x="480" y="322" font-size="148" fill="url(#paint)" stroke="#151927" stroke-width="28" letter-spacing="-8">ИЛЮХА</text><text x="480" y="322" font-size="148" fill="url(#paint)" stroke="#d8dbe3" stroke-width="4" letter-spacing="-8">ИЛЮХА</text></g>
-<path d="M160 344q40 30 80 0t80 0" fill="none" stroke="#a9d2c8" stroke-width="9" stroke-linecap="round"/><g fill="#a9d2c8"><path d="M235 349l-8 35h12l8-35z"/></g>
-<g fill="#b7bbc0" opacity=".35"><circle cx="95" cy="132" r="8"/><circle cx="150" cy="95" r="5"/><circle cx="822" cy="118" r="10"/><circle cx="870" cy="148" r="5"/><circle cx="795" cy="420" r="7"/></g>
+<g opacity=".24" font-family="DejaVu Sans, sans-serif" font-weight="900" font-style="italic" text-anchor="middle" paint-order="stroke fill"><text x="480" y="322" font-size="148" fill="#bfc3c8" stroke="#222831" stroke-width="28" letter-spacing="-8">ИЛЮХА</text></g>
+<g font-family="DejaVu Sans, sans-serif" font-weight="900" font-style="italic" text-anchor="middle" paint-order="stroke fill" clip-path="url(#halfPaint)"><text x="480" y="322" font-size="148" fill="url(#paint)" stroke="#151927" stroke-width="28" letter-spacing="-8">ИЛЮХА</text><text x="480" y="322" font-size="148" fill="url(#paint)" stroke="#d8dbe3" stroke-width="4" letter-spacing="-8">ИЛЮХА</text></g>
+<path d="M160 344q40 30 80 0t80 0" fill="none" stroke="#19f0d4" stroke-width="9" stroke-linecap="round" opacity=".9"/><g fill="#19f0d4"><path d="M235 349l-8 35h12l8-35z"/></g>
+<g fill="#aeb4ba" opacity=".3"><circle cx="822" cy="118" r="10"/><circle cx="870" cy="148" r="5"/><circle cx="795" cy="420" r="7"/></g>
+<g fill="#ff4e91"><circle cx="100" cy="132" r="8"/><circle cx="150" cy="95" r="5"/><circle cx="180" cy="420" r="6"/></g>
+<g fill="none" stroke="#ff4e91" stroke-width="7" stroke-linecap="round"><path d="M85 285l-20 30m32-20l-4 35"/></g>
 <text x="480" y="455" font-family="DejaVu Sans, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#858b92" letter-spacing="5">PARKOUR • KEEP PAINTING</text>
 <rect x="18" y="18" width="924" height="504" rx="8" fill="none" stroke="#858e97" stroke-width="5" opacity=".45"/>
 </svg>
