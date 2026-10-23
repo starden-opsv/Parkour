@@ -82,7 +82,7 @@ func _check_obstacles() -> void:
 	]
 	for obstacle in obstacles:
 		if absf(float(obstacle.x) - player_world) < 28.0:
-			var avoided := (obstacle.kind == "jump" and not on_ground) or (obstacle.kind == "slide" and slide_timer > 0.0)
+			var avoided: bool = (str(obstacle["kind"]) == "jump" and not on_ground) or (str(obstacle["kind"]) == "slide" and slide_timer > 0.0)
 			if not avoided:
 				_finish_level(true)
 				return
@@ -152,7 +152,7 @@ func _draw() -> void:
 		draw_rect(Rect2(bx, ground - 100 - float((i * 17) % 60), 72, 120 + float((i * 17) % 60)), Color(0.075, 0.12, 0.18))
 	for i in PICKUP_POSITIONS.size():
 		if not collected[i]:
-			var px := PICKUP_POSITIONS[i] - world_x + w * 0.22
+			var px: float = float(PICKUP_POSITIONS[i]) - world_x + w * 0.22
 			if px > -30 and px < w + 30:
 				draw_circle(Vector2(px, ground - 54), 15, Color(0.12, 0.85, 0.88))
 				draw_circle(Vector2(px, ground - 54), 8, Color(0.08, 0.16, 0.22))
@@ -167,7 +167,7 @@ func _draw() -> void:
 	for obstacle in obstacles:
 		var ox := float(obstacle.x) - world_x + w * 0.22
 		if ox > -80 and ox < w + 80:
-			if obstacle.kind == "jump":
+			if str(obstacle["kind"]) == "jump":
 				draw_rect(Rect2(ox - 20, ground - 48, 40, 48), Color(0.9, 0.42, 0.22))
 				draw_line(Vector2(ox - 13, ground - 35), Vector2(ox + 13, ground - 35), Color(1.0, 0.8, 0.55), 3.0)
 			else:
