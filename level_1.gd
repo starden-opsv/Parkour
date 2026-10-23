@@ -35,8 +35,19 @@ var climb_timer := 0.0
 var character_anim_time := 0.0
 var player_sprite: AnimatedSprite2D
 var was_airborne := false
+var parallax_layers: Array[Dictionary] = []
+const PARALLAX_LAYER_DEFS := [
+	{"path": "res://assets/background/post_soviet_city_parallax/post_soviet_city_parallax/layer_2_stars.png", "speed": 0.015},
+	{"path": "res://assets/background/post_soviet_city_parallax/post_soviet_city_parallax/layer_3_moon.png", "speed": 0.02},
+	{"path": "res://assets/background/post_soviet_city_parallax/post_soviet_city_parallax/layer_4_clouds_1.png", "speed": 0.035},
+	{"path": "res://assets/background/post_soviet_city_parallax/post_soviet_city_parallax/layer_5_clouds_2.png", "speed": 0.055},
+	{"path": "res://assets/background/post_soviet_city_parallax/post_soviet_city_parallax/layer_6_far_buildings.png", "speed": 0.10},
+	{"path": "res://assets/background/post_soviet_city_parallax/post_soviet_city_parallax/layer_7_bg_buildings.png", "speed": 0.17},
+	{"path": "res://assets/background/post_soviet_city_parallax/post_soviet_city_parallax/layer_8_fg_buildings.png", "speed": 0.28}
+]
 
 func _ready() -> void:
+	_load_parallax_layers()
 	for _i in PICKUP_POSITIONS.size():
 		collected.append(false)
 	player_y = _ground_y() - PLAYER_HEIGHT
@@ -243,12 +254,35 @@ func _handle_press(position: Vector2) -> void:
 	else:
 		jump_requested = true
 
+func _load_parallax_layers() -> void:
+	parallax_layers.clear()
+	for layer_def in PARALLAX_LAYER_DEFS:
+		var texture := load(str(layer_def["path"])) as Texture2D
+		if texture == null:
+			push_warning("Parallax layer missing: " + str(layer_def["path"]))
+			continue
+		parallax_layers.append({"texture": texture, "speed": float(layer_def["speed"])})
+
+func _draw_parallax_layer(texture: Texture2D, speed: float, ground: float) -> void:
+	# Fit each layer to the viewport height, then repeat it horizontally.
+	# Wrapping the offset by the tile width avoids gaps during endless running.
+	var tile_height := maxf(ground, 1.0)
+	var scale_factor := tile_height / float(texture.get_height())
+	var tile_width := maxf(float(texture.get_width()) * scale_factor, 1.0)
+	var offset := fmod(world_x * speed, tile_width)
+	var x := -offset
+	while x < size.x:
+		draw_texture_rect(texture, Rect2(Vector2(x, 0.0), Vector2(tile_width, tile_height)), false)
+		x += tile_width
+
 func _draw() -> void:
 	var w := size.x
 	var h := size.y
 	var ground := _ground_y()
 	var player_x := _player_screen_x()
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0.055, 0.09, 0.15))
+	for layer in parallax_layers:
+		_draw_parallax_layer(layer["texture"] as Texture2D, float(layer["speed"]), ground)
 	draw_rect(Rect2(0, ground, w, h - ground), Color(0.12, 0.16, 0.19))
 	for i in range(0, int(w) + 80, 80):
 		var x := float(i) - fmod(world_x, 80.0)
