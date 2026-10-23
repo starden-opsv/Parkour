@@ -4,12 +4,14 @@ extends Control
 const RUN_SPEED := 230.0
 const GRAVITY := 1150.0
 const JUMP_SPEED := -520.0
-const SLIDE_DURATION := 0.62
+const SLIDE_DURATION := 0.78
+const CLIMB_DURATION := 0.68
+const CLIMB_RANGE := 105.0
 const LEVEL_LENGTH := 3300.0
 const PLAYER_X_RATIO := 0.22
-const PLAYER_WIDTH := 34.0
-const PLAYER_HEIGHT := 58.0
-const SLIDE_HEIGHT := 26.0
+const PLAYER_WIDTH := 38.0
+const PLAYER_HEIGHT := 64.0
+const SLIDE_HEIGHT := 24.0
 const PICKUP_RADIUS := 15.0
 const DEBUG_HITBOXES := false
 const PICKUP_POSITIONS := [430.0, 650.0, 880.0, 1110.0, 1390.0, 1630.0, 1880.0, 2110.0, 2350.0, 2580.0]
@@ -28,6 +30,8 @@ var result_color := Color.WHITE
 var jump_requested := false
 var jump_count := 0
 var slide_requested := false
+var climb_requested := false
+var climb_timer := 0.0
 var character_anim_time := 0.0
 var player_sprite: AnimatedSprite2D
 var was_airborne := false
@@ -67,7 +71,11 @@ func _process(delta: float) -> void:
 			queue_redraw()
 		return
 
-	if jump_requested and slide_timer <= 0.0:
+	if climb_requested and on_ground and slide_timer <= 0.0 and climb_timer <= 0.0:
+		_try_climb()
+	climb_requested = false
+
+	if jump_requested and slide_timer <= 0.0 and climb_timer <= 0.0:
 		if on_ground:
 			player_vy = JUMP_SPEED
 			on_ground = false
@@ -78,7 +86,7 @@ func _process(delta: float) -> void:
 			jump_count = 2
 	jump_requested = false
 
-	if slide_requested and on_ground and slide_timer <= 0.0:
+	if slide_requested and on_ground and slide_timer <= 0.0 and climb_timer <= 0.0:
 		slide_timer = SLIDE_DURATION
 		player_y = _ground_y() - SLIDE_HEIGHT
 	slide_requested = false
@@ -87,9 +95,20 @@ func _process(delta: float) -> void:
 		if slide_timer == 0.0 and on_ground:
 			player_y = _ground_y() - PLAYER_HEIGHT
 
-	world_x += (RUN_SPEED * 1.3 if slide_timer > 0.0 else RUN_SPEED) * delta
-	player_vy += GRAVITY * delta
-	player_y += player_vy * delta
+	if climb_timer > 0.0:
+		climb_timer = maxf(0.0, climb_timer - delta)
+		world_x += RUN_SPEED * delta
+		var climb_progress := 1.0 - climb_timer / CLIMB_DURATION
+		player_vy = 0.0
+		player_y = _ground_y() - PLAYER_HEIGHT - sin(climb_progress * PI) * 135.0
+		if climb_timer == 0.0:
+			player_y = _ground_y() - PLAYER_HEIGHT
+			on_ground = true
+			jump_count = 0
+	else:
+		world_x += (RUN_SPEED * 1.35 if slide_timer > 0.0 else RUN_SPEED) * delta
+		player_vy += GRAVITY * delta
+		player_y += player_vy * delta
 	if climb_timer <= 0.0 and player_y + _player_height() >= _ground_y():
 		player_y = _ground_y() - _player_height()
 		player_vy = 0.0
@@ -116,23 +135,39 @@ func _check_pickups() -> void:
 
 func _obstacles() -> Array[Dictionary]:
 	return [
-		{"x": 760.0, "kind": "jump"},
+		{"x": 760.0, "kind": "climb"},
 		{"x": 1280.0, "kind": "slide"},
 		{"x": 1800.0, "kind": "jump"},
 		{"x": 2240.0, "kind": "slide"},
-		{"x": 2760.0, "kind": "jump"}
+		{"x": 2760.0, "kind": "climb"}
 	]
 
 func _obstacle_rects(obstacle: Dictionary, screen_x: float, ground: float) -> Array[Rect2]:
 	var rects: Array[Rect2] = []
 	if str(obstacle["kind"]) == "jump":
-		rects.append(Rect2(screen_x - 20.0, ground - 48.0, 40.0, 48.0))
+		rects.append(Rect2(screen_x - 32.0, ground - 78.0, 64.0, 78.0))
+	elif str(obstacle["kind"]) == "climb":
+		rects.append(Rect2(screen_x - 34.0, ground - 112.0, 68.0, 112.0))
 	else:
 		# The low beam intersects a standing player but clears the crouched slide hitbox.
 		rects.append(Rect2(screen_x - 28.0, ground - 52.0, 56.0, 12.0))
 		rects.append(Rect2(screen_x - 28.0, ground - 52.0, 8.0, 26.0))
 		rects.append(Rect2(screen_x + 20.0, ground - 52.0, 8.0, 26.0))
 	return rects
+
+func _try_climb() -> void:
+	var player_x := _player_screen_x()
+	for obstacle in _obstacles():
+		if str(obstacle["kind"]) != "climb":
+			continue
+		var obstacle_screen_x: float = float(obstacle["x"]) - world_x + player_x
+		var distance := obstacle_screen_x - player_x
+		if distance >= -PLAYER_WIDTH and distance <= CLIMB_RANGE:
+			climb_timer = CLIMB_DURATION
+			on_ground = false
+			player_vy = 0.0
+			jump_count = 0
+			return
 
 func _check_obstacles() -> void:
 	var player_rect := _player_rect()
@@ -191,14 +226,20 @@ func _input(event: InputEvent) -> void:
 			jump_requested = true
 		elif event.keycode == KEY_DOWN:
 			slide_requested = true
+		elif event.keycode == KEY_C or event.keycode == KEY_E:
+			climb_requested = true
 
 func _handle_press(position: Vector2) -> void:
 	if ended:
 		get_tree().reload_current_scene()
-	elif position.y >= size.y * 0.62 and position.x >= size.x * 0.58:
-		slide_requested = true
-	elif position.y >= size.y * 0.62 and position.x <= size.x * 0.42:
-		jump_requested = true
+	elif position.y >= size.y * 0.62:
+		var zone := position.x / maxf(size.x, 1.0)
+		if zone < 0.34:
+			jump_requested = true
+		elif zone < 0.67:
+			slide_requested = true
+		else:
+			climb_requested = true
 	else:
 		jump_requested = true
 
@@ -226,8 +267,12 @@ func _draw() -> void:
 		var ox: float = float(obstacle["x"]) - world_x + player_x
 		if ox > -80 and ox < w + 80:
 			if str(obstacle["kind"]) == "jump":
-				draw_rect(Rect2(ox - 20, ground - 48, 40, 48), Color(0.9, 0.42, 0.22))
-				draw_line(Vector2(ox - 13, ground - 35), Vector2(ox + 13, ground - 35), Color(1.0, 0.8, 0.55), 3.0)
+				draw_rect(Rect2(ox - 32, ground - 78, 64, 78), Color(0.9, 0.42, 0.22))
+				draw_line(Vector2(ox - 22, ground - 58), Vector2(ox + 22, ground - 58), Color(1.0, 0.8, 0.55), 4.0)
+			elif str(obstacle["kind"]) == "climb":
+				draw_rect(Rect2(ox - 34, ground - 112, 68, 112), Color(0.67, 0.38, 0.23))
+				draw_rect(Rect2(ox - 27, ground - 100, 54, 7), Color(0.95, 0.69, 0.39))
+				draw_rect(Rect2(ox - 27, ground - 76, 54, 7), Color(0.95, 0.69, 0.39))
 			else:
 				draw_rect(Rect2(ox - 28, ground - 52, 56, 12), Color(0.88, 0.32, 0.28))
 				draw_rect(Rect2(ox - 28, ground - 52, 8, 26), Color(0.88, 0.32, 0.28))
@@ -242,11 +287,13 @@ func _draw() -> void:
 	draw_rect(Rect2(18, 18, w - 36, 8), Color(0.16, 0.22, 0.28))
 	draw_rect(Rect2(18, 18, (w - 36) * clampf(world_x / LEVEL_LENGTH, 0.0, 1.0), 8), Color(0.12, 0.85, 0.88))
 	draw_string(ThemeDB.fallback_font, Vector2(22, 48), "ГРАФФИТИ: %d" % _collected_count(), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color.WHITE)
-	draw_circle(Vector2(82, h - 68), 48, Color(0.12, 0.48, 0.62, 0.92))
-	draw_string(ThemeDB.fallback_font, Vector2(44, h - 61), "ПРЫЖОК", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE)
-	draw_circle(Vector2(w - 82, h - 68), 48, Color(0.1, 0.35, 0.48, 0.92))
-	draw_string(ThemeDB.fallback_font, Vector2(w - 119, h - 61), "ПОДКАТ", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE)
-	draw_string(ThemeDB.fallback_font, Vector2(w * 0.5 - 112, h - 26), "ПРЫЖОК СЛЕВА • ПОДКАТ СПРАВА", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(0.85, 0.9, 0.96))
+	draw_circle(Vector2(w * 0.14, h - 68), 45, Color(0.12, 0.48, 0.62, 0.92))
+	draw_string(ThemeDB.fallback_font, Vector2(w * 0.14 - 38, h - 61), "ПРЫЖОК", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color.WHITE)
+	draw_circle(Vector2(w * 0.50, h - 68), 45, Color(0.1, 0.35, 0.48, 0.92))
+	draw_string(ThemeDB.fallback_font, Vector2(w * 0.50 - 34, h - 61), "СКОЛЬЗ.", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color.WHITE)
+	draw_circle(Vector2(w * 0.86, h - 68), 45, Color(0.35, 0.28, 0.52, 0.95))
+	draw_string(ThemeDB.fallback_font, Vector2(w * 0.86 - 42, h - 61), "КАРАБК.", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color.WHITE)
+	draw_string(ThemeDB.fallback_font, Vector2(w * 0.5 - 160, h - 14), "ПРЫЖОК • СКОЛЬЖЕНИЕ • КАРАБКАНИЕ", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0.85, 0.9, 0.96))
 	if ended:
 		_draw_result()
 
