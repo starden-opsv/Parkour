@@ -50,6 +50,19 @@ func _run_smoke_tests() -> void:
 	if sprite.animation != "run":
 		_fail("Player should start with the run animation")
 		return
+	# Slide uses a shorter collision rectangle; keep this contract covered by CI.
+	level_instance.set("slide_timer", 0.5)
+	level_instance.set("player_y", float(level_instance.call("_ground_y")) - 24.0)
+	var slide_rect: Rect2 = level_instance.call("_player_rect")
+	if not is_equal_approx(slide_rect.size.y, 24.0):
+		_fail("Slide hitbox should be 24 pixels tall")
+		return
+	if not is_equal_approx(slide_rect.position.y + slide_rect.size.y, float(level_instance.call("_ground_y"))):
+		_fail("Slide hitbox should remain aligned to the ground")
+		return
+	level_instance.set("slide_timer", 0.0)
+	level_instance.set("player_y", float(level_instance.call("_ground_y")) - 64.0)
+	print("PASS: slide hitbox is short and remains grounded")
 	print("PASS: level scene instantiates and player starts running")
 	if not level_instance.has_method("_draw_wildstyle_mural"):
 		_fail("Seeded Wildstyle mural generator is missing")
