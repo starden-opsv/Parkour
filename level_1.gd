@@ -745,7 +745,7 @@ func _draw_wildstyle_mural(rect: Rect2, seed_value: int, fully_painted: bool) ->
 	# A small shear gives the word a forward-driving graffiti lean.
 	var shear := -0.13
 	var transform_origin := origin
-	var shear_matrix := Transform2D(Vector2(1.0, 0.0), Vector2(shear, 1.0), 0.0, transform_origin)
+	var shear_matrix := Transform2D(Vector2(1.0, 0.0), Vector2(shear, 1.0), transform_origin)
 	draw_set_transform_matrix(shear_matrix)
 	for depth in range(8, 0, -1):
 		var offset := Vector2(float(depth) * 1.4, float(depth) * 1.2)
