@@ -735,7 +735,6 @@ func _draw_result() -> void:
 	var success := result_text != "Не получилось!"
 	if success:
 		# The wall is the end-of-level reward: unfinished unless every tag was collected.
-		var all_collected := _collected_count() == pickup_positions.size()
 		var mural_rect := Rect2(w * 0.16, h * 0.08, w * 0.68, h * 0.50)
 		_draw_example_graffiti(mural_rect)
 		var count := _collected_count()
