@@ -19,6 +19,16 @@ const PICKUP_RADIUS := 15.0
 const DEBUG_HITBOXES := false
 const MIN_PICKUPS := 14
 const MAX_PICKUPS := 18
+const GRAFFITI_EXAMPLE_PATHS: Array[String] = [
+	"res://assets/graffiti-constructor/4 Examples/1Band.png",
+	"res://assets/graffiti-constructor/4 Examples/2Squad13.png",
+	"res://assets/graffiti-constructor/4 Examples/3Sport.png",
+	"res://assets/graffiti-constructor/4 Examples/4Shortway.png",
+	"res://assets/graffiti-constructor/4 Examples/5Greenteam.png",
+	"res://assets/graffiti-constructor/4 Examples/6Benice.png",
+	"res://assets/graffiti-constructor/4 Examples/7Dangerarea.png",
+	"res://assets/graffiti-constructor/4 Examples/8Loot.png"
+]
 
 var rng := RandomNumberGenerator.new()
 var level_seed: int = 0
@@ -65,6 +75,7 @@ var was_airborne := false
 var parallax_layers: Array[Dictionary] = []
 var graffiti_full_texture: Texture2D
 var graffiti_partial_texture: Texture2D
+var end_graffiti_texture: Texture2D
 const PARALLAX_LAYER_DEFS := [
 	{"path": "res://assets/background/post_soviet_city_parallax/post_soviet_city_parallax/layer_2_stars.png", "speed": 0.015},
 	{"path": "res://assets/background/post_soviet_city_parallax/post_soviet_city_parallax/layer_3_moon.png", "speed": 0.02},
@@ -419,6 +430,11 @@ func _finish_level(failed: bool = false) -> void:
 			result_color = Color(0.72, 0.95, 0.72)
 	if not failed:
 		run_score += _collected_count() * 100
+		# Choose one of the bundled graffiti examples for this completed run.
+		var graffiti_path: String = GRAFFITI_EXAMPLE_PATHS[rng.randi_range(0, GRAFFITI_EXAMPLE_PATHS.size() - 1)]
+		end_graffiti_texture = load(graffiti_path) as Texture2D
+		if end_graffiti_texture == null:
+			push_warning("Could not load end-of-level graffiti: " + graffiti_path)
 	_save_best_score()
 	queue_redraw()
 
@@ -721,7 +737,7 @@ func _draw_result() -> void:
 		# The wall is the end-of-level reward: unfinished unless every tag was collected.
 		var all_collected := _collected_count() == pickup_positions.size()
 		var mural_rect := Rect2(w * 0.16, h * 0.08, w * 0.68, h * 0.50)
-		_draw_wildstyle_mural(mural_rect, level_seed, all_collected)
+		_draw_example_graffiti(mural_rect)
 		var count := _collected_count()
 		var progress_label := "ГРАФФИТИ ЗАКРАШЕНО: %d/%d" % [count, pickup_positions.size()]
 		var progress_color := Color(0.38, 1.0, 0.78) if all_collected else Color(0.92, 0.76, 0.48)
@@ -734,6 +750,20 @@ func _draw_result() -> void:
 		draw_string(ThemeDB.fallback_font, Vector2(24, h * 0.66), result_text, HORIZONTAL_ALIGNMENT_CENTER, w - 48, 32, result_color)
 		draw_string(ThemeDB.fallback_font, Vector2(24, h * 0.76), "Попробуй ещё раз", HORIZONTAL_ALIGNMENT_CENTER, w - 48, 24, Color.WHITE)
 	draw_string(ThemeDB.fallback_font, Vector2(24, h * 0.94), "Собрано: %d/%d" % [_collected_count(), pickup_positions.size()], HORIZONTAL_ALIGNMENT_CENTER, w - 48, 16, Color.WHITE)
+
+
+func _draw_example_graffiti(rect: Rect2) -> void:
+	# Keep the wall frame, but fit the selected example without stretching or cropping it.
+	draw_rect(rect, Color("#252a31"))
+	if end_graffiti_texture == null:
+		return
+	var texture_size := Vector2(end_graffiti_texture.get_width(), end_graffiti_texture.get_height())
+	if texture_size.x <= 0.0 or texture_size.y <= 0.0:
+		return
+	var fit_scale := minf(rect.size.x / texture_size.x, rect.size.y / texture_size.y)
+	var fitted_size := texture_size * fit_scale
+	var fitted_rect := Rect2(rect.position + (rect.size - fitted_size) * 0.5, fitted_size)
+	draw_texture_rect(end_graffiti_texture, fitted_rect, false)
 
 
 func _draw_wildstyle_mural(rect: Rect2, seed_value: int, fully_painted: bool) -> void:
