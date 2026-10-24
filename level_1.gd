@@ -57,7 +57,10 @@ var climb_target_x := -1.0
 var climb_phase_timer := 0.0
 var climb_start_y := 0.0
 var character_anim_time := 0.0
-var player_sprite: AnimatedSprite2D
+var player_sprite: Sprite2D
+var character_viewport: SubViewport
+var character_animation_player: AnimationPlayer
+var current_character_animation := ""
 var was_airborne := false
 var parallax_layers: Array[Dictionary] = []
 var graffiti_full_texture: Texture2D
@@ -602,85 +605,111 @@ func _draw_finish_marker(view_width: float, ground: float, player_x: float) -> v
 	draw_string(ThemeDB.fallback_font, Vector2(marker_x - 58.0, top - 12.0), "ФИНИШ", HORIZONTAL_ALIGNMENT_CENTER, 116.0, 22, Color(0.3, 1.0, 0.88, 0.65 + glow * 0.35))
 
 func _setup_player_sprite() -> void:
-	player_sprite = AnimatedSprite2D.new()
+	# Render the 3D Universal Animation Library mannequin into a transparent 2D viewport.
+	# The game remains a 2D side-scroller; gameplay physics and hitboxes stay independent.
+	character_viewport = SubViewport.new()
+	character_viewport.name = "CharacterViewport"
+	character_viewport.size = Vector2i(256, 256)
+	character_viewport.transparent_bg = true
+	character_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	character_viewport.msaa_3d = Viewport.MSAA_2X
+	add_child(character_viewport)
+
+	var character_world := Node3D.new()
+	character_world.name = "CharacterWorld"
+	character_viewport.add_child(character_world)
+
+	var character_scene := load("res://assets/Universal Animation Library[Standard]/Unreal-Godot/UAL1_Standard.glb") as PackedScene
+	if character_scene == null:
+		push_error("Could not load Universal Animation Library Standard character.")
+		return
+	var character := character_scene.instantiate() as Node3D
+	if character == null:
+		push_error("Standard character scene root is not Node3D.")
+		return
+	character.name = "UAL1_Standard"
+	# Turn the mannequin into a side-on runner facing screen-right.
+	character.rotation_degrees.y = -90.0
+	character_world.add_child(character)
+
+	character_animation_player = character.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	if character_animation_player == null:
+		push_error("Standard character has no AnimationPlayer.")
+		return
+
+	var camera := Camera3D.new()
+	camera.name = "CharacterCamera"
+	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+	camera.size = 2.2
+	camera.position = Vector3(0.0, 1.0, 4.5)
+	camera.look_at(Vector3(0.0, 1.0, 0.0), Vector3.UP)
+	camera.current = true
+	character_world.add_child(camera)
+
+	var key_light := DirectionalLight3D.new()
+	key_light.name = "CharacterKeyLight"
+	key_light.rotation_degrees = Vector3(-25.0, -35.0, 0.0)
+	key_light.light_energy = 1.6
+	key_light.shadow_enabled = false
+	character_world.add_child(key_light)
+
+	var fill_light := OmniLight3D.new()
+	fill_light.name = "CharacterFillLight"
+	fill_light.position = Vector3(1.5, 2.0, 2.0)
+	fill_light.light_energy = 0.65
+	fill_light.omni_range = 8.0
+	character_world.add_child(fill_light)
+
+	player_sprite = Sprite2D.new()
 	player_sprite.name = "PlayerSprite"
 	player_sprite.centered = true
-	player_sprite.scale = Vector2(0.48, 0.48)
+	player_sprite.texture = character_viewport.get_texture()
+	player_sprite.scale = Vector2(0.31, 0.31)
 	player_sprite.z_index = 5
-	player_sprite.sprite_frames = SpriteFrames.new()
-	player_sprite.sprite_frames.add_animation("idle")
-	player_sprite.sprite_frames.set_animation_speed("idle", 7.0)
-	player_sprite.sprite_frames.set_animation_loop("idle", true)
-	player_sprite.sprite_frames.add_animation("run")
-	player_sprite.sprite_frames.set_animation_speed("run", 12.0)
-	player_sprite.sprite_frames.set_animation_loop("run", true)
-	player_sprite.sprite_frames.add_animation("jump")
-	player_sprite.sprite_frames.set_animation_speed("jump", 10.0)
-	player_sprite.sprite_frames.set_animation_loop("jump", false)
-	player_sprite.sprite_frames.add_animation("running_jump")
-	player_sprite.sprite_frames.set_animation_speed("running_jump", 10.0)
-	player_sprite.sprite_frames.set_animation_loop("running_jump", false)
-	player_sprite.sprite_frames.add_animation("fall")
-	player_sprite.sprite_frames.set_animation_speed("fall", 10.0)
-	player_sprite.sprite_frames.set_animation_loop("fall", true)
-	player_sprite.sprite_frames.add_animation("land")
-	player_sprite.sprite_frames.set_animation_speed("land", 12.0)
-	player_sprite.sprite_frames.set_animation_loop("land", false)
-	player_sprite.sprite_frames.add_animation("dash")
-	player_sprite.sprite_frames.set_animation_speed("dash", 12.0)
-	player_sprite.sprite_frames.set_animation_loop("dash", true)
-	_add_sprite_sheet("idle", "res://assets/character/character/idle/idle.png", 7, 1)
-	_add_sprite_sheet("run", "res://assets/character/character/running/running.png", 12, 12)
-	_add_sprite_sheet("jump", "res://assets/character/character/jumping/jump.png", 13, 13)
-	_add_sprite_sheet("running_jump", "res://assets/character/character/runningjump/runningjump.png", 7, 7)
-	_add_sprite_sheet("fall", "res://assets/character/character/falling/fall.png", 9, 3)
-	_add_sprite_sheet("land", "res://assets/character/character/landing/land.png", 8, 8)
-	_add_sprite_sheet("dash", "res://assets/character/character/dashing/dash.png", 5, 5)
 	add_child(player_sprite)
-	player_sprite.play("run")
+	_play_character_animation("Jog_Fwd")
 
-func _add_sprite_sheet(animation_name: String, resource_path: String, frame_count: int, columns: int) -> void:
-	var sheet := load(resource_path) as Texture2D
-	if sheet == null:
-		push_warning("Character sprite sheet could not be loaded: " + resource_path)
+
+func _play_character_animation(animation_name: String) -> void:
+	if character_animation_player == null:
 		return
-	for frame_index in frame_count:
-		var atlas_frame := AtlasTexture.new()
-		atlas_frame.atlas = sheet
-		var column := frame_index % columns
-		var row := int(frame_index / columns)
-		atlas_frame.region = Rect2(column * 128, row * 128, 128, 128)
-		player_sprite.sprite_frames.add_frame(animation_name, atlas_frame)
+	if not character_animation_player.has_animation(animation_name):
+		push_warning("Standard character animation is missing: " + animation_name)
+		return
+	if current_character_animation == animation_name and character_animation_player.is_playing():
+		return
+	current_character_animation = animation_name
+	character_animation_player.play(animation_name)
+
 
 func _update_player_sprite() -> void:
 	if player_sprite == null:
 		return
 	var player_rect := _player_rect()
-	player_sprite.position = Vector2(player_rect.position.x + player_rect.size.x * 0.5, player_rect.end.y - (12.0 if slide_timer > 0.0 else 31.0))
-	player_sprite.scale = Vector2(0.48, 0.36) if slide_timer > 0.0 else Vector2(0.48, 0.48)
+	player_sprite.position = Vector2(
+		player_rect.position.x + player_rect.size.x * 0.5,
+		player_rect.end.y - (12.0 if slide_timer > 0.0 else 31.0)
+	)
+	player_sprite.scale = Vector2(0.31, 0.31)
 	player_sprite.visible = true
-	var next_animation := "run"
+
+	var next_animation := "Jog_Fwd"
 	if slide_timer > 0.0:
-		next_animation = "dash"
+		next_animation = "Roll"
 	elif not on_ground:
-		if player_vy > 120.0:
-			next_animation = "fall"
-		elif jump_count >= 2:
-			next_animation = "running_jump"
+		if jump_count >= 2 or player_vy < -120.0:
+			next_animation = "Jump"
 		else:
-			next_animation = "jump"
+			next_animation = "Jump"
 	else:
 		if was_airborne:
-			next_animation = "land"
+			next_animation = "Jump_Land"
 			was_airborne = false
-		elif player_sprite.animation == "land" and player_sprite.is_playing():
-			next_animation = "land"
+		elif current_character_animation == "Jump_Land" and character_animation_player != null and character_animation_player.is_playing():
+			next_animation = "Jump_Land"
 	if not on_ground:
 		was_airborne = true
-	if player_sprite.animation != next_animation:
-		player_sprite.play(next_animation)
-	elif not player_sprite.is_playing() and next_animation != "land":
-		player_sprite.play(next_animation)
+	_play_character_animation(next_animation)
 
 
 func _draw_result() -> void:

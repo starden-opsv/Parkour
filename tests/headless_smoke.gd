@@ -25,31 +25,23 @@ func _run_smoke_tests() -> void:
 	var level_instance := level_packed.instantiate()
 	root.add_child(level_instance)
 	await process_frame
-	var sprite := level_instance.get_node_or_null("PlayerSprite") as AnimatedSprite2D
+	var sprite := level_instance.get_node_or_null("PlayerSprite") as Sprite2D
 	if sprite == null:
-		_fail("PlayerSprite was not created")
+		_fail("Standard character Sprite2D was not created")
 		return
-	var expected_frames := {
-		"idle": 7,
-		"run": 12,
-		"jump": 13,
-		"running_jump": 7,
-		"fall": 9,
-		"land": 8,
-		"dash": 5,
-	}
-	for animation_name in expected_frames:
-		if not sprite.sprite_frames.has_animation(animation_name):
-			_fail("Missing animation: " + animation_name)
-			return
-		var actual_frames: int = sprite.sprite_frames.get_frame_count(animation_name)
-		if actual_frames != expected_frames[animation_name]:
-			_fail("Animation %s expected %d frames, got %d" % [animation_name, expected_frames[animation_name], actual_frames])
-			return
-		print("PASS: animation %s has %d frames" % [animation_name, actual_frames])
-	if sprite.animation != "run":
-		_fail("Player should start with the run animation")
+	if sprite.texture == null or not sprite.texture is ViewportTexture:
+		_fail("Standard character must be rendered through a SubViewport texture")
 		return
+	var animation_player := level_instance.get_node_or_null("CharacterViewport/CharacterWorld/UAL1_Standard/AnimationPlayer") as AnimationPlayer
+	if animation_player == null:
+		_fail("Standard character AnimationPlayer was not created")
+		return
+	for animation_name in ["Idle", "Jog_Fwd", "Sprint", "Jump_Start", "Jump", "Jump_Land", "Crouch_Fwd", "Roll"]:
+		if not animation_player.has_animation(animation_name):
+			_fail("Standard character animation is missing: " + animation_name)
+			return
+	print("PASS: Universal Animation Library Standard mannequin is rendered in the 2D level")
+	print("PASS: Standard character run, jump, landing, crouch, and roll clips are available")
 	# Slide uses a shorter collision rectangle; keep this contract covered by CI.
 	level_instance.set("slide_timer", 0.5)
 	level_instance.set("player_y", float(level_instance.call("_ground_y")) - 24.0)
