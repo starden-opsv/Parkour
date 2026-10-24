@@ -642,9 +642,9 @@ func _setup_player_sprite() -> void:
 	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
 	camera.size = 2.2
 	camera.position = Vector3(0.0, 1.0, 4.5)
-	camera.look_at(Vector3(0.0, 1.0, 0.0), Vector3.UP)
 	camera.current = true
 	character_world.add_child(camera)
+	camera.look_at(Vector3(0.0, 1.0, 0.0), Vector3.UP)
 
 	var key_light := DirectionalLight3D.new()
 	key_light.name = "CharacterKeyLight"
