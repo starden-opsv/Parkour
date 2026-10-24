@@ -3,7 +3,7 @@ extends Control
 # MVP level: temporary geometric art, no external assets required.
 const RUN_SPEED := 230.0
 const GRAVITY := 1150.0
-const JUMP_SPEED := -520.0
+const JUMP_SPEED := -560.0
 const SLIDE_DURATION := 0.78
 const CLIMB_RANGE := 650.0
 const CLIMB_UP_DURATION := 0.34
@@ -119,10 +119,6 @@ func _process(delta: float) -> void:
 			queue_redraw()
 		return
 
-	if climb_requested and on_ground and slide_timer <= 0.0 and climb_state.is_empty():
-		_try_climb()
-	climb_requested = false
-
 	if jump_requested and slide_timer <= 0.0 and climb_state.is_empty():
 		if on_ground:
 			player_vy = JUMP_SPEED
@@ -196,10 +192,16 @@ func _generate_level_layout() -> void:
 	while obstacle_x < level_length - 380.0:
 		var roll := rng.randi_range(0, 99)
 		var kind := "jump"
-		if roll < 34:
+		if obstacle_layout.size() == 0:
+			kind = "jump" # Teach the basic jump first.
+		elif obstacle_layout.size() == 1:
+			kind = "slide" # Then introduce the low-beam slide.
+		elif obstacle_layout.size() == 2:
+			kind = "double_jump" # Taller barrier introduces the second airborne jump.
+		elif roll < 50:
 			kind = "slide"
-		elif roll < 67:
-			kind = "climb"
+		else:
+			kind = "jump"
 		if kind == previous_kind:
 			repeated_kind_count += 1
 		else:
@@ -280,8 +282,8 @@ func _obstacle_rects(obstacle: Dictionary, screen_x: float, ground: float) -> Ar
 	var rects: Array[Rect2] = []
 	if str(obstacle["kind"]) == "jump":
 		rects.append(Rect2(screen_x - 32.0, ground - 78.0, 64.0, 78.0))
-	elif str(obstacle["kind"]) == "climb":
-		rects.append(Rect2(screen_x - 34.0, ground - 112.0, 68.0, 112.0))
+	elif str(obstacle["kind"]) == "double_jump":
+		rects.append(Rect2(screen_x - 34.0, ground - 118.0, 68.0, 118.0))
 	else:
 		# The low beam intersects a standing player but clears the crouched slide hitbox.
 		rects.append(Rect2(screen_x - 28.0, ground - 52.0, 56.0, 12.0))
@@ -462,8 +464,7 @@ func _input(event: InputEvent) -> void:
 			jump_requested = true
 		elif event.keycode == KEY_DOWN:
 			slide_requested = true
-		elif event.keycode == KEY_C or event.keycode == KEY_E:
-			climb_requested = true
+
 
 func _handle_press(position: Vector2) -> void:
 	if ended:
@@ -475,7 +476,7 @@ func _handle_press(position: Vector2) -> void:
 		elif zone < 0.67:
 			slide_requested = true
 		else:
-			climb_requested = true
+			jump_requested = true
 	else:
 		jump_requested = true
 

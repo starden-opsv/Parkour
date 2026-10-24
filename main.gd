@@ -44,5 +44,5 @@ func _responsive_layout() -> void:
 		start_button.custom_minimum_size.y = 62.0
 
 func _on_start_pressed() -> void:
-	# Temporary test entry point: the main menu opens the wall-climb prototype.
-	get_tree().change_scene_to_file("res://tests/wall_climb_prototype.tscn")
+	# Stage 1 uses the core runner moves; wall-climb prototype is excluded.
+	get_tree().change_scene_to_file("res://level_1.tscn")
