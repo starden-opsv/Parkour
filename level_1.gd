@@ -629,7 +629,7 @@ func _setup_player_sprite() -> void:
 		return
 	character.name = "UAL1_Standard"
 	# Turn the mannequin into a side-on runner facing screen-right.
-	character.rotation_degrees.y = -90.0
+	character.rotation_degrees.y = 90.0
 	character_world.add_child(character)
 
 	character_animation_player = character.find_child("AnimationPlayer", true, false) as AnimationPlayer
